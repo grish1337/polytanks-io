@@ -1,72 +1,63 @@
 import { Entity } from './Entity.js';
+import { Vector2D } from '../engine/Vector2D.js';
 
 export class Shape extends Entity {
-  constructor(x, y, shapeType = 'square') {
+  constructor(x, y, type = 'square') {
     let radius = 16;
-    let mass = 3;
-    let hp = 30;
-    let bodyDmg = 8;
-    let xp = 10;
-    let color = '#ffe869'; // Diep Yellow Square
-    let sides = 4;
+    let mass = 8;
+    let health = 10;
+    let xpValue = 10;
+    let color = '#ffe869';
 
-    if (shapeType === 'triangle') {
+    if (type === 'triangle') {
       radius = 20;
-      mass = 6;
-      hp = 60;
-      bodyDmg = 12;
-      xp = 25;
-      color = '#fc5e5e'; // Diep Red Triangle
-      sides = 3;
-    } else if (shapeType === 'pentagon') {
+      mass = 14;
+      health = 30;
+      xpValue = 25;
+      color = '#fc5e5e';
+    } else if (type === 'pentagon') {
       radius = 30;
-      mass = 16;
-      hp = 180;
-      bodyDmg = 20;
-      xp = 130;
-      color = '#5582ff'; // Diep Blue Pentagon
-      sides = 5;
-    } else if (shapeType === 'alpha_pentagon') {
+      mass = 35;
+      health = 100;
+      xpValue = 130;
+      color = '#5582ff';
+    } else if (type === 'alpha_pentagon') {
       radius = 75;
-      mass = 80;
-      hp = 3000;
-      bodyDmg = 40;
-      xp = 3000;
-      color = '#5582ff'; // Diep Giant Pentagon
-      sides = 5;
+      mass = 250;
+      health = 1000;
+      xpValue = 3000;
+      color = '#5582ff';
     }
 
     super(x, y, radius, mass);
     this.type = 'shape';
-    this.shapeType = shapeType;
-    this.maxHealth = hp;
-    this.health = hp;
-    this.bodyDamage = bodyDmg;
-    this.xpValue = xp;
+    this.shapeType = type;
+    this.health = health;
+    this.maxHealth = health;
+    this.xpValue = xpValue;
     this.color = color;
-    this.sides = sides;
+    this.bodyDamage = type === 'alpha_pentagon' ? 20 : (type === 'pentagon' ? 12 : (type === 'triangle' ? 8 : 5));
 
     this.angle = Math.random() * Math.PI * 2;
-    this.angularVel = (Math.random() - 0.5) * 0.015;
-    this.elasticity = 0.3;
+    this.rotSpeed = (Math.random() - 0.5) * 0.015;
+
+    // Gentle ambient floating drift velocity (like Diep.io shapes)
+    this.vel = new Vector2D((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4);
+    this.friction = 0.995;
   }
 
-  onDeath(attacker) {
-    if (attacker && attacker.addXP) {
-      attacker.addXP(this.xpValue);
-    }
+  update(dt = 1) {
+    super.update(dt);
+    this.angle += this.rotSpeed * dt;
   }
 
   draw(ctx, camera) {
     const screen = camera.worldToScreen(this.pos.x, this.pos.y);
     const renderRadius = this.radius * camera.zoom;
 
-    // Viewport culling
     if (
-      screen.x < -renderRadius * 2 ||
-      screen.x > camera.viewportWidth + renderRadius * 2 ||
-      screen.y < -renderRadius * 2 ||
-      screen.y > camera.viewportHeight + renderRadius * 2
+      screen.x < -100 || screen.x > camera.viewportWidth + 100 ||
+      screen.y < -100 || screen.y > camera.viewportHeight + 100
     ) {
       return;
     }
@@ -75,19 +66,21 @@ export class Shape extends Entity {
     ctx.translate(screen.x, screen.y);
     ctx.rotate(this.angle);
 
-    // Diep.io Clean Flat Drawing (No Neon Glow)
-    ctx.shadowBlur = 0;
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : this.color;
     ctx.strokeStyle = '#555555';
-    ctx.lineWidth = Math.max(3, renderRadius * 0.12);
+    ctx.lineWidth = Math.max(2.5, renderRadius * 0.15);
 
     ctx.beginPath();
-    for (let i = 0; i < this.sides; i++) {
-      const a = (i * 2 * Math.PI) / this.sides;
-      const px = Math.cos(a) * renderRadius;
-      const py = Math.sin(a) * renderRadius;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    let sides = 4;
+    if (this.shapeType === 'triangle') sides = 3;
+    else if (this.shapeType === 'pentagon' || this.shapeType === 'alpha_pentagon') sides = 5;
+
+    for (let i = 0; i < sides; i++) {
+      const a = (i * Math.PI * 2) / sides;
+      const vx = Math.cos(a) * renderRadius;
+      const vy = Math.sin(a) * renderRadius;
+      if (i === 0) ctx.moveTo(vx, vy);
+      else ctx.lineTo(vx, vy);
     }
     ctx.closePath();
     ctx.fill();
@@ -95,20 +88,18 @@ export class Shape extends Entity {
 
     ctx.restore();
 
-    // Diep.io Health Bar
+    // Health bar if damaged
     if (this.health < this.maxHealth) {
       const barW = renderRadius * 2.2;
-      const barH = 5 * camera.zoom;
+      const barH = 4 * camera.zoom;
       const barX = screen.x - barW / 2;
-      const barY = screen.y + renderRadius + 10 * camera.zoom;
+      const barY = screen.y + renderRadius + 8 * camera.zoom;
       const hpPercent = Math.max(0, this.health / this.maxHealth);
 
-      ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       ctx.fillRect(barX, barY, barW, barH);
-      ctx.fillStyle = '#85e37d'; // Diep Green Health Bar
+      ctx.fillStyle = '#85e37d';
       ctx.fillRect(barX, barY, barW * hpPercent, barH);
-      ctx.restore();
     }
   }
 }

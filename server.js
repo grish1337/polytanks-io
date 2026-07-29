@@ -25,7 +25,7 @@ const players = new Map();
 let shapes = [];
 let bullets = [];
 
-// Deterministic Seeded Shape Generator
+// Deterministic Seeded Shape Generator with Diep.io Ambient Floating Velocities
 function initShapes() {
   shapes = [];
   for (let i = 0; i < 350; i++) {
@@ -39,9 +39,13 @@ function initShapes() {
     const x = 100 + Math.abs(seedX) * (ARENA_WIDTH - 200);
     const y = 100 + Math.abs(seedY) * (ARENA_HEIGHT - 200);
 
+    // Diep.io ambient floating drift velocities
+    const vx = (Math.sin(i * 45.12) * 0.4);
+    const vy = (Math.cos(i * 45.12) * 0.4);
+
     shapes.push({
       id: `s_${i}`,
-      x, y,
+      x, y, vx, vy,
       type: shapeType,
       radius, hp, maxHp: hp,
       color: shapeType === 'square' ? '#ffe869' : (shapeType === 'triangle' ? '#fc5e5e' : '#5582ff')
@@ -52,7 +56,7 @@ initShapes();
 
 // WebSocket Handler
 wss.on('connection', (ws) => {
-  const playerId = `player_${Math.floor(1000 + Math.random() * 9000)}`;
+  const playerId = `player_${Math.floor(10000 + Math.random() * 90000)}`;
   
   const player = {
     id: playerId,
@@ -124,8 +128,18 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 60 Hz Server Simulation Loop
+// 60 Hz Server Physics Loop
 setInterval(() => {
+  // 0. Update Diep.io Ambient Shape Floating Movement
+  shapes.forEach((s) => {
+    s.x += s.vx;
+    s.y += s.vy;
+
+    // Bounce off arena walls
+    if (s.x < 100 || s.x > ARENA_WIDTH - 100) s.vx = -s.vx;
+    if (s.y < 100 || s.y > ARENA_HEIGHT - 100) s.vy = -s.vy;
+  });
+
   // 1. Tank-Shape Ramming & Collisions
   players.forEach((p) => {
     if (p.classId === 'arena_closer') return;
@@ -145,8 +159,9 @@ setInterval(() => {
         s.x += nx * overlap * 0.5;
         s.y += ny * overlap * 0.5;
 
-        p.hp = Math.max(0, p.hp - 1);
-        s.hp -= 20;
+        // Divided contact damage by 2 (0.5 HP per contact frame)
+        p.hp = Math.max(0, p.hp - 0.5);
+        s.hp -= 10;
 
         if (s.hp <= 0) {
           s.x = 100 + Math.random() * (ARENA_WIDTH - 200);
@@ -158,7 +173,7 @@ setInterval(() => {
     });
   });
 
-  // 2. Bullets & PVP Collisions
+  // 2. Bullets & PVP Collisions (Divided damage by 2)
   const newBullets = [];
   bullets.forEach((b) => {
     b.x += b.vx;
@@ -168,13 +183,13 @@ setInterval(() => {
     if (b.life > 0 && b.x >= 0 && b.x <= ARENA_WIDTH && b.y >= 0 && b.y <= ARENA_HEIGHT) {
       let hit = false;
 
-      // PVP Damage
+      // PVP Damage (Divided by 2: 10 to 18 HP damage)
       players.forEach((targetP, targetId) => {
         if (targetId !== b.ownerId && targetP.classId !== 'arena_closer') {
           const dx = targetP.x - b.x;
           const dy = targetP.y - b.y;
           if (dx * dx + dy * dy < (targetP.radius + b.radius) ** 2) {
-            const dmg = b.radius > 20 ? 35 : 18;
+            const dmg = b.radius > 20 ? 18 : 10;
             targetP.hp = Math.max(0, targetP.hp - dmg);
             hit = true;
             if (targetP.hp <= 0) {
@@ -186,10 +201,10 @@ setInterval(() => {
       });
 
       if (!hit) {
-        // Shape Damage
+        // Shape Damage (Divided by 2: 18 to 30 HP damage)
         const shooter = players.get(b.ownerId);
         const isAc = shooter && shooter.classId === 'arena_closer';
-        const dmg = isAc ? 500 : (b.radius > 18 ? 60 : 35);
+        const dmg = isAc ? 500 : (b.radius > 18 ? 30 : 18);
 
         shapes.forEach((s) => {
           const dx = s.x - b.x;
@@ -212,7 +227,7 @@ setInterval(() => {
   });
   bullets = newBullets;
 
-  // Broadcast Snapshot
+  // Broadcast Snapshot to all clients
   const snapshot = JSON.stringify({
     type: 'UPDATE',
     players: Array.from(players.values()),
