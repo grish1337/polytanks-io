@@ -81,8 +81,11 @@ export class Tank extends Entity {
   update(dt = 1, game = null) {
     super.update(dt);
 
-    this.vel.x *= Math.pow(0.88, dt);
-    this.vel.y *= Math.pow(0.88, dt);
+    // Buttery Smooth Physics Damping & Gliding Inertia!
+    this.vel.x *= Math.pow(0.92, dt);
+    this.vel.y *= Math.pow(0.92, dt);
+    this.pos.x += this.vel.x * dt;
+    this.pos.y += this.vel.y * dt;
 
     // Health Regeneration
     const regenStat = this.upgradeSystem.getMultiplier('healthRegen');
@@ -130,10 +133,8 @@ export class Tank extends Entity {
         const bColor = isAc ? '#ffe869' : (this.color || '#00b2e7');
 
         if (game.networkManager && game.networkManager.connected) {
-          // Authoritative Server Bullet Broadcasting (NO DUPLICATION!)
           game.networkManager.sendShoot(muzzleX, muzzleY, vx, vy, bRadius, bColor);
         } else {
-          // Offline fallback
           const dmgStat = this.upgradeSystem.getMultiplier('bulletDamage');
           const penStat = this.upgradeSystem.getMultiplier('bulletPenetration');
           const bDmg = isAc ? 500 : 20 * dmgStat;
@@ -142,7 +143,6 @@ export class Tank extends Entity {
           game.bullets.push(bullet);
         }
 
-        // Cannon recoil push
         const recoilMag = (b.recoil || 4) * (isAc ? 8 : 1);
         this.vel.x -= Math.cos(finalAngle) * recoilMag;
         this.vel.y -= Math.sin(finalAngle) * recoilMag;
@@ -201,7 +201,7 @@ export class Tank extends Entity {
     });
     ctx.restore();
 
-    // 3. Draw Tank Body (Gradient Skin support!)
+    // 3. Draw Tank Body
     ctx.save();
     if (this.equippedSkin && Array.isArray(this.equippedSkin.colors) && this.equippedSkin.colors.length >= 2) {
       try {

@@ -7,17 +7,16 @@
   <meta name="description" content="A modern 2D arena tank game with dynamic elastic collisions, stat upgrades, class evolutions, and AI bots.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=JetBrains Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script>
-    // Bulletproof Console Helper
+    // Console Helper (Requires Dev Token authorization)
     window.ac = function() {
-      if (window.game) {
+      if (window.game && window.game.hudManager && window.game.hudManager.devTokenSystem && window.game.hudManager.devTokenSystem.isAuthorized) {
         window.game.spawnAC();
         return "🟡 ARENA CLOSER ACTIVATED!";
       } else {
-        setTimeout(function() { window.ac(); }, 100);
-        return "Initializing & Spawning Arena Closer...";
+        return "🔒 Dev Authorization Required! Click '🔑 Dev Token' in the main menu to enter your secret key.";
       }
     };
     window.spawnAC = window.ac;
@@ -53,7 +52,7 @@
         <div class="guide-item"><span>WASD</span> Move</div>
         <div class="guide-item"><span>Left Click</span> Fire & Upgrade</div>
         <div class="guide-item"><span>1-8</span> Upgrades</div>
-        <div class="guide-item"><span>N</span> Cycle Classes</div>
+        <div class="guide-item"><span>E</span> Auto-Fire</div>
       </div>
     </div>
   </div>
@@ -146,7 +145,7 @@
       </div>
     </div>
 
-    <!-- Dev Testing Toolbar -->
+    <!-- Dev Testing Toolbar (Remains completely hidden for normal players) -->
     <div id="devToolbar" class="top-center-hud hidden">
       <div class="dev-toolbar">
         <span class="dev-label">DEV TOOLS:</span>

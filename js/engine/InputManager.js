@@ -14,7 +14,7 @@ export class InputManager {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
 
-      // Hotkeys 1-8 for Stat Upgrades
+      // Hotkeys 1-8 for Stat Upgrades (Available to all players!)
       let digit = -1;
       if (e.code.startsWith('Digit')) {
         digit = parseInt(e.code.replace('Digit', ''));
@@ -48,40 +48,44 @@ export class InputManager {
         this.game.player.activateAbility(this.game);
       }
 
-      // DEV HOTKEYS:
-      // K: +5,000 XP
-      if (e.code === 'KeyK' && this.game.player) {
-        this.game.player.addXP(5000);
-        if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: +5,000 XP Added! (Lv ${this.game.player.level})`);
-      }
+      // DEV HOTKEYS (Restricted strictly to Authorized Dev Token users only!)
+      const isDevAuth = this.game.hudManager && this.game.hudManager.devTokenSystem && this.game.hudManager.devTokenSystem.isAuthorized;
 
-      // L: Level 45
-      if (e.code === 'KeyL' && this.game.player) {
-        this.game.player.addXP(30000);
-        if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: Instant Level 45!`);
-      }
+      if (isDevAuth) {
+        // K: +5,000 XP
+        if (e.code === 'KeyK' && this.game.player) {
+          this.game.player.addXP(5000);
+          if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: +5,000 XP Added! (Lv ${this.game.player.level})`);
+        }
 
-      // P or O: Instant Arena Closer 🟡 Transformation!
-      if ((e.code === 'KeyP' || e.code === 'KeyO') && this.game.player) {
-        this.game.spawnAC();
-      }
+        // L: Level 45
+        if (e.code === 'KeyL' && this.game.player) {
+          this.game.player.addXP(30000);
+          if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: Instant Level 45!`);
+        }
 
-      // N: Cycle Tank Class
-      if (e.code === 'KeyN' && this.game.player) {
-        this.cycleNextClass();
-      }
+        // P or O: Instant Arena Closer 🟡 Transformation!
+        if ((e.code === 'KeyP' || e.code === 'KeyO') && this.game.player) {
+          this.game.spawnAC();
+        }
 
-      // M: God Mode
-      if (e.code === 'KeyM' && this.game.player) {
-        this.game.player.godMode = !this.game.player.godMode;
-        if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: God Mode ${this.game.player.godMode ? 'ENABLED' : 'DISABLED'}`);
-      }
+        // N: Cycle Tank Class
+        if (e.code === 'KeyN' && this.game.player) {
+          this.cycleNextClass();
+        }
 
-      // T: Teleport to Nearest Player
-      if (e.code === 'KeyT' && this.game.player && this.game.networkManager) {
-        const success = this.game.networkManager.teleportToNearestPlayer();
-        if (this.game.hudManager) {
-          this.game.hudManager.addKillFeedMessage(success ? `DEV: Teleported to player!` : `No other players online to teleport to.`);
+        // M: God Mode
+        if (e.code === 'KeyM' && this.game.player) {
+          this.game.player.godMode = !this.game.player.godMode;
+          if (this.game.hudManager) this.game.hudManager.addKillFeedMessage(`DEV: God Mode ${this.game.player.godMode ? 'ENABLED' : 'DISABLED'}`);
+        }
+
+        // T: Teleport to Nearest Player
+        if (e.code === 'KeyT' && this.game.player && this.game.networkManager) {
+          const success = this.game.networkManager.teleportToNearestPlayer();
+          if (this.game.hudManager) {
+            this.game.hudManager.addKillFeedMessage(success ? `DEV: Teleported to player!` : `No other players online to teleport to.`);
+          }
         }
       }
     });
@@ -139,13 +143,15 @@ export class InputManager {
       ? player.upgradeSystem.getMultiplier('movementSpeed')
       : 1.0;
 
-    let moveSpeed = 4.5 * speedStat;
+    let moveSpeedMultiplier = 2.4 * speedStat;
     if (player.classInfo && player.classInfo.id === 'arena_closer') {
-      moveSpeed *= 2.5;
+      moveSpeedMultiplier *= 2.5;
     }
 
-    player.pos.x += moveX * moveSpeed;
-    player.pos.y += moveY * moveSpeed;
+    // Buttery smooth physics acceleration & inertia!
+    const accel = 0.85 * moveSpeedMultiplier;
+    player.vel.x += moveX * accel;
+    player.vel.y += moveY * accel;
 
     if (player.autoSpin) {
       player.angle += 0.05;
