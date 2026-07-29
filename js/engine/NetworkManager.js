@@ -19,7 +19,6 @@ export class NetworkManager {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname || 'localhost';
     
-    // Automatically detect local vs Render.com / Cloud deployment
     let wsUrl;
     if (host === 'localhost' || host === '127.0.0.1') {
       wsUrl = `${protocol}//${host}:8765`;
@@ -35,6 +34,9 @@ export class NetworkManager {
         console.log('⚡ Connected to PolyTanks Server!');
         if (this.game.hudManager) {
           this.game.hudManager.addKillFeedMessage('🟢 MULTIPLAYER LIVE!');
+        }
+        if (this.game.player) {
+          this.sendJoin(this.game.player.pos.x, this.game.player.pos.y, this.game.player.name, this.game.player.color);
         }
       };
 
@@ -86,7 +88,7 @@ export class NetworkManager {
     const currentRemoteIds = new Set();
 
     playersData.forEach(pData => {
-      // 1. Local Player Health, XP & Score Synchronization
+      // 1. Local Player Synchronization (Exact single player match!)
       if (pData.id === this.playerId) {
         if (this.game.player) {
           if (pData.score > this.game.player.score) {
@@ -198,9 +200,17 @@ export class NetworkManager {
       }
     });
 
-    // Merge server bullets with active local player bullets so local shooting renders immediately!
     const localBullets = (this.game.bullets || []).filter(b => b.owner === this.game.player && !b.dead);
     this.game.bullets = [...serverBullets, ...localBullets];
+  }
+
+  sendJoin(x, y, name, color) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'JOIN',
+        x, y, name, color
+      }));
+    }
   }
 
   sendInput(player) {
@@ -229,11 +239,11 @@ export class NetworkManager {
     }
   }
 
-  sendRespawn(x, y) {
+  sendRespawn(x, y, name, color) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'RESPAWN',
-        x, y
+        x, y, name, color
       }));
     }
   }

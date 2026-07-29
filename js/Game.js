@@ -73,14 +73,12 @@ export class Game {
     this.tanks.push(this.player);
 
     if (this.networkManager) {
-      this.networkManager.remoteTanksMap.forEach((remoteTank) => {
-        this.tanks.push(remoteTank);
-      });
+      this.networkManager.remoteTanksMap.clear();
 
       if (!this.networkManager.connected) {
         this.networkManager.connect();
       } else {
-        this.networkManager.sendRespawn(spawnX, spawnY);
+        this.networkManager.sendJoin(spawnX, spawnY, playerName, playerColor);
       }
     }
 
