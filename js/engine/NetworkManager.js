@@ -87,12 +87,20 @@ export class NetworkManager {
     const currentRemoteIds = new Set();
 
     playersData.forEach(pData => {
-      // 1. Local Player Health & Score Synchronization
+      // 1. Local Player Health, XP & Score Synchronization
       if (pData.id === this.playerId) {
-        if (this.game.player && !this.game.player.godMode && this.game.player.classInfo.id !== 'arena_closer') {
-          this.game.player.health = pData.hp;
-          if (this.game.player.health <= 0) {
-            this.game.player.dead = true;
+        if (this.game.player) {
+          // Award XP to local player when server score increases!
+          if (pData.score > this.game.player.score) {
+            const xpGained = pData.score - this.game.player.score;
+            this.game.player.addXP(xpGained);
+          }
+
+          if (!this.game.player.godMode && this.game.player.classInfo.id !== 'arena_closer') {
+            this.game.player.health = pData.hp;
+            if (this.game.player.health <= 0) {
+              this.game.player.dead = true;
+            }
           }
         }
         return;

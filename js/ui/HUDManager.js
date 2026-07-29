@@ -316,11 +316,16 @@ export class HUDManager {
           <div style="font-size: 0.65rem; color: #fff;">[LVL ${cls.requiredLevel}]</div>
         `;
         
-        card.onclick = (e) => {
+        const selectEvo = (e) => {
+          e.preventDefault();
           e.stopPropagation();
           player.changeClass(key);
           this.addKillFeedMessage(`Evolved into ${cls.name}!`);
         };
+
+        card.addEventListener('click', selectEvo);
+        card.addEventListener('mousedown', selectEvo);
+        card.addEventListener('touchstart', selectEvo);
 
         this.evolutionOptions.appendChild(card);
       });
