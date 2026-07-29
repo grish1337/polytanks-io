@@ -85,7 +85,10 @@ wss.on('connection', (ws) => {
             level: 1,
             hp: 100,
             maxHp: 100,
-            classId: 'basic'
+            classId: 'basic',
+            equippedSkinId: data.equippedSkinId || null,
+            equippedEffectId: data.equippedEffectId || null,
+            equippedPetId: data.equippedPetId || null
           };
           players.set(playerId, player);
         } else {
@@ -98,6 +101,9 @@ wss.on('connection', (ws) => {
           player.classId = 'basic';
           if (data.name) player.name = data.name;
           if (data.color) player.color = data.color;
+          if (data.equippedSkinId) player.equippedSkinId = data.equippedSkinId;
+          if (data.equippedEffectId) player.equippedEffectId = data.equippedEffectId;
+          if (data.equippedPetId) player.equippedPetId = data.equippedPetId;
         }
       } else if (data.type === 'INPUT') {
         let player = players.get(playerId);
@@ -114,7 +120,10 @@ wss.on('connection', (ws) => {
             level: 1,
             hp: 100,
             maxHp: 100,
-            classId: 'basic'
+            classId: 'basic',
+            equippedSkinId: data.equippedSkinId || null,
+            equippedEffectId: data.equippedEffectId || null,
+            equippedPetId: data.equippedPetId || null
           };
           players.set(playerId, player);
         }
@@ -126,6 +135,9 @@ wss.on('connection', (ws) => {
           player.level = data.level ?? player.level;
           player.score = data.score ?? player.score;
           player.classId = data.classId ?? player.classId;
+          player.equippedSkinId = data.equippedSkinId ?? player.equippedSkinId;
+          player.equippedEffectId = data.equippedEffectId ?? player.equippedEffectId;
+          player.equippedPetId = data.equippedPetId ?? player.equippedPetId;
           if (data.name) player.name = data.name;
           if (data.color) player.color = data.color;
         }

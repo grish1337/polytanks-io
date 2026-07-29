@@ -1,6 +1,7 @@
 import { Tank } from '../entities/Tank.js';
 import { Shape } from '../entities/Shape.js';
 import { Bullet } from '../entities/Bullet.js';
+import { SHOP_ITEMS } from '../systems/ShopSystem.js';
 
 export class NetworkManager {
   constructor(game) {
@@ -88,7 +89,7 @@ export class NetworkManager {
     const currentRemoteIds = new Set();
 
     playersData.forEach(pData => {
-      // 1. Local Player Synchronization (Exact single player match!)
+      // 1. Local Player Synchronization
       if (pData.id === this.playerId) {
         if (this.game.player) {
           if (pData.score > this.game.player.score) {
@@ -108,7 +109,7 @@ export class NetworkManager {
 
       currentRemoteIds.add(pData.id);
 
-      // 2. Remote Players Synchronization
+      // 2. Remote Players Synchronization & Cosmetic Sync
       let tank = this.remoteTanksMap.get(pData.id);
       if (!tank) {
         tank = new Tank(pData.x, pData.y, pData.name || 'Player', pData.color || '#f14e54', false);
@@ -132,6 +133,17 @@ export class NetworkManager {
         }
         if (pData.radius) {
           tank.radius = pData.radius;
+        }
+
+        // Synchronize Cosmetics for everyone to see!
+        if (pData.equippedSkinId) {
+          tank.equippedSkin = SHOP_ITEMS.find(i => i.id === pData.equippedSkinId) || null;
+        }
+        if (pData.equippedEffectId) {
+          tank.equippedEffect = SHOP_ITEMS.find(i => i.id === pData.equippedEffectId) || null;
+        }
+        if (pData.equippedPetId) {
+          tank.equippedPet = SHOP_ITEMS.find(i => i.id === pData.equippedPetId) || null;
         }
 
         // Smooth position & angle lerping
@@ -200,15 +212,18 @@ export class NetworkManager {
       }
     });
 
-    const localBullets = (this.game.bullets || []).filter(b => b.owner === this.game.player && !b.dead);
-    this.game.bullets = [...serverBullets, ...localBullets];
+    this.game.bullets = serverBullets;
   }
 
   sendJoin(x, y, name, color) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const player = this.game.player;
       this.ws.send(JSON.stringify({
         type: 'JOIN',
-        x, y, name, color
+        x, y, name, color,
+        equippedSkinId: player && player.equippedSkin ? player.equippedSkin.id : null,
+        equippedEffectId: player && player.equippedEffect ? player.equippedEffect.id : null,
+        equippedPetId: player && player.equippedPet ? player.equippedPet.id : null
       }));
     }
   }
@@ -225,7 +240,10 @@ export class NetworkManager {
         score: player.score,
         classId: player.classInfo.id,
         name: player.name,
-        color: player.color
+        color: player.color,
+        equippedSkinId: player.equippedSkin ? player.equippedSkin.id : null,
+        equippedEffectId: player.equippedEffect ? player.equippedEffect.id : null,
+        equippedPetId: player.equippedPet ? player.equippedPet.id : null
       }));
     }
   }
@@ -241,9 +259,13 @@ export class NetworkManager {
 
   sendRespawn(x, y, name, color) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const player = this.game.player;
       this.ws.send(JSON.stringify({
         type: 'RESPAWN',
-        x, y, name, color
+        x, y, name, color,
+        equippedSkinId: player && player.equippedSkin ? player.equippedSkin.id : null,
+        equippedEffectId: player && player.equippedEffect ? player.equippedEffect.id : null,
+        equippedPetId: player && player.equippedPet ? player.equippedPet.id : null
       }));
     }
   }

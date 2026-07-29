@@ -81,13 +81,6 @@ export class Tank extends Entity {
   update(dt = 1, game = null) {
     super.update(dt);
 
-    const speedStat = this.upgradeSystem.getMultiplier('movementSpeed');
-    let moveSpeedMultiplier = 2.4 * speedStat;
-
-    if (this.classInfo.id === 'arena_closer') {
-      moveSpeedMultiplier *= 2.5;
-    }
-
     this.vel.x *= Math.pow(0.88, dt);
     this.vel.y *= Math.pow(0.88, dt);
 
@@ -132,26 +125,25 @@ export class Tank extends Entity {
         const vx = Math.cos(finalAngle) * bSpeed;
         const vy = Math.sin(finalAngle) * bSpeed;
 
-        const dmgStat = this.upgradeSystem.getMultiplier('bulletDamage');
-        const penStat = this.upgradeSystem.getMultiplier('bulletPenetration');
-
-        const isAc = (this.classInfo.id === 'arena_closer');
-        const bDmg = isAc ? 500 : 20 * dmgStat;
-        const bPen = isAc ? 500 : 20 * penStat;
         const bRadius = (b.width ? b.width * 0.45 : 8) * (this.radius / 26);
-
+        const isAc = (this.classInfo.id === 'arena_closer');
         const bColor = isAc ? '#ffe869' : (this.color || '#00b2e7');
 
-        const bullet = new Bullet(muzzleX, muzzleY, vx, vy, bRadius, bDmg, bPen, bSpeed, this, bColor);
-        game.bullets.push(bullet);
-
-        // Network bullet broadcast
         if (game.networkManager && game.networkManager.connected) {
+          // Authoritative Server Bullet Broadcasting (NO DUPLICATION!)
           game.networkManager.sendShoot(muzzleX, muzzleY, vx, vy, bRadius, bColor);
+        } else {
+          // Offline fallback
+          const dmgStat = this.upgradeSystem.getMultiplier('bulletDamage');
+          const penStat = this.upgradeSystem.getMultiplier('bulletPenetration');
+          const bDmg = isAc ? 500 : 20 * dmgStat;
+          const bPen = isAc ? 500 : 20 * penStat;
+          const bullet = new Bullet(muzzleX, muzzleY, vx, vy, bRadius, bDmg, bPen, bSpeed, this, bColor);
+          game.bullets.push(bullet);
         }
 
         // Cannon recoil push
-        const recoilMag = (b.recoil || 4) * (this.classInfo.id === 'arena_closer' ? 8 : 1);
+        const recoilMag = (b.recoil || 4) * (isAc ? 8 : 1);
         this.vel.x -= Math.cos(finalAngle) * recoilMag;
         this.vel.y -= Math.sin(finalAngle) * recoilMag;
 
@@ -209,7 +201,7 @@ export class Tank extends Entity {
     });
     ctx.restore();
 
-    // 3. Draw Tank Body (Bulletproof Gradient Skin support!)
+    // 3. Draw Tank Body (Gradient Skin support!)
     ctx.save();
     if (this.equippedSkin && Array.isArray(this.equippedSkin.colors) && this.equippedSkin.colors.length >= 2) {
       try {
