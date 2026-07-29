@@ -56,13 +56,19 @@ export class Game {
   }
 
   startGame(playerName, playerColor) {
+    if (document.activeElement) {
+      document.activeElement.blur(); // Release keyboard focus to game window!
+    }
+
     this.tanks = [];
     this.survivalTime = 0;
 
-    // Spawn players closer to center (3000 to 4000) so connected players meet easily
+    // Spawn players near center (3000 to 4000) so connected players meet easily
     const spawnX = 3000 + Math.random() * 1000;
     const spawnY = 3000 + Math.random() * 1000;
+    
     this.player = new Tank(spawnX, spawnY, playerName, playerColor, false);
+    this.camera.snapTo(spawnX, spawnY); // Instantly center camera on spawned tank!
     
     this.tanks.push(this.player);
 
@@ -108,6 +114,39 @@ export class Game {
 
         if (this.networkManager.connected) {
           this.networkManager.sendInput(this.player);
+        }
+      }
+
+      // Local Bullets vs Shapes Collision & XP Awarding
+      for (let bIdx = this.bullets.length - 1; bIdx >= 0; bIdx--) {
+        const b = this.bullets[bIdx];
+        if (!b || b.dead) continue;
+
+        b.update(dt);
+
+        if (b.owner === this.player) {
+          for (let sIdx = 0; sIdx < this.shapes.length; sIdx++) {
+            const s = this.shapes[sIdx];
+            if (!s || s.health <= 0) continue;
+
+            const dx = s.pos.x - b.pos.x;
+            const dy = s.pos.y - b.pos.y;
+            if (dx * dx + dy * dy < (s.radius + b.radius) ** 2) {
+              s.health -= b.damage;
+              b.health -= (s.shapeType === 'alpha_pentagon' ? 40 : (s.shapeType === 'pentagon' ? 20 : (s.shapeType === 'triangle' ? 12 : 8)));
+              
+              if (b.health <= 0) b.dead = true;
+
+              if (s.health <= 0) {
+                s.health = s.maxHealth;
+                s.pos.x = 100 + Math.random() * (this.arenaWidth - 200);
+                s.pos.y = 100 + Math.random() * (this.arenaHeight - 200);
+                this.player.addXP(s.xpValue);
+                this.hudManager.addKillFeedMessage(`+${s.xpValue} XP (${s.shapeType.toUpperCase()})`);
+              }
+              break;
+            }
+          }
         }
       }
 
@@ -168,7 +207,7 @@ export class Game {
         }
 
         for (let i = 0; i < this.bullets.length; i++) {
-          if (this.bullets[i]) this.bullets[i].draw(this.renderer.ctx, this.camera);
+          if (this.bullets[i] && !this.bullets[i].dead) this.bullets[i].draw(this.renderer.ctx, this.camera);
         }
 
         for (let i = 0; i < this.tanks.length; i++) {
