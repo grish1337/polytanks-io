@@ -125,9 +125,9 @@ export class InputManager {
     let moveX = 0;
     let moveY = 0;
 
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) moveY -= 1;
+    if (this.keys['KeyW'] || this.keys['ArrowUp'] || this.keys['KeyZ']) moveY -= 1;
     if (this.keys['KeyS'] || this.keys['ArrowDown']) moveY += 1;
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft'] || this.keys['KeyQ']) moveX -= 1;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
 
     if (moveX !== 0 && moveY !== 0) {
@@ -135,15 +135,24 @@ export class InputManager {
       moveY *= 0.7071;
     }
 
-    const accel = 2.8 * player.moveSpeedMultiplier;
-    player.vel.x += moveX * accel * 0.1;
-    player.vel.y += moveY * accel * 0.1;
+    const speedStat = (player.upgradeSystem ? player.upgradeSystem.getMultiplier('movementSpeed') : 1.0);
+    let moveSpeedMultiplier = 2.4 * speedStat;
+    if (player.classInfo && player.classInfo.id === 'arena_closer') {
+      moveSpeedMultiplier *= 2.5;
+    }
 
-    if (!player.autoSpin) {
+    player.vel.x += moveX * moveSpeedMultiplier * 0.8;
+    player.vel.y += moveY * moveSpeedMultiplier * 0.8;
+
+    if (player.autoSpin) {
+      player.angle += 0.05;
+    } else if (camera) {
       const worldMouse = camera.screenToWorld(this.mousePos.x, this.mousePos.y);
       player.angle = Math.atan2(worldMouse.y - player.pos.y, worldMouse.x - player.pos.x);
     }
 
-    player.isFiring = this.isMouseDown;
+    if (this.isMouseDown || player.autoFire) {
+      player.shoot(this.game);
+    }
   }
 }

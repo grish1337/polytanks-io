@@ -54,7 +54,6 @@ export class NetworkManager {
 
       this.ws.onclose = () => {
         this.connected = false;
-        // Auto-reconnect WebSockets if connection drops
         setTimeout(() => this.connect(), 1500);
       };
 
@@ -90,7 +89,6 @@ export class NetworkManager {
       // 1. Local Player Health, XP & Score Synchronization
       if (pData.id === this.playerId) {
         if (this.game.player) {
-          // Award XP to local player when server score increases!
           if (pData.score > this.game.player.score) {
             const xpGained = pData.score - this.game.player.score;
             this.game.player.addXP(xpGained);
@@ -139,7 +137,6 @@ export class NetworkManager {
         tank.pos.y += (pData.y - tank.pos.y) * 0.45;
         tank.angle = pData.angle || 0;
 
-        // Ensure tank is in this.game.tanks array even if tanks array was reset!
         if (!this.game.tanks.includes(tank)) {
           this.game.tanks.push(tank);
         }
@@ -177,7 +174,7 @@ export class NetworkManager {
     if (!this.game) return;
 
     const currentBulletIds = new Set();
-    const activeBullets = [];
+    const serverBullets = [];
 
     bulletsData.forEach(bData => {
       currentBulletIds.add(bData.id);
@@ -187,11 +184,11 @@ export class NetworkManager {
         bullet = new Bullet(bData.x, bData.y, bData.vx, bData.vy, bData.radius, 15, 20, 10, null, bData.color);
         bullet.id = bData.id;
         this.bulletsMap.set(bData.id, bullet);
-        activeBullets.push(bullet);
+        serverBullets.push(bullet);
       } else {
         bullet.pos.x = bData.x;
         bullet.pos.y = bData.y;
-        activeBullets.push(bullet);
+        serverBullets.push(bullet);
       }
     });
 
@@ -201,7 +198,9 @@ export class NetworkManager {
       }
     });
 
-    this.game.bullets = activeBullets;
+    // Merge server bullets with active local player bullets so local shooting renders immediately!
+    const localBullets = (this.game.bullets || []).filter(b => b.owner === this.game.player && !b.dead);
+    this.game.bullets = [...serverBullets, ...localBullets];
   }
 
   sendInput(player) {
