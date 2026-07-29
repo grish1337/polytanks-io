@@ -1,0 +1,23 @@
+{
+  "name": "polytanks-io",
+  "version": "1.0.0",
+  "description": "Multiplayer 2D Tank Battle Arena inspired by Diep.io",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "game",
+    "multiplayer",
+    "diep",
+    "canvas",
+    "websockets"
+  ],
+  "author": "PolyTanks Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}

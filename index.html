@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PolyTanks.io - Minimal 2D Battle Arena</title>
+  <meta name="description" content="A modern 2D arena tank game with dynamic elastic collisions, stat upgrades, class evolutions, and AI bots.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Bulletproof Console Helper
+    window.ac = function() {
+      if (window.game) {
+        window.game.spawnAC();
+        return "🟡 ARENA CLOSER ACTIVATED!";
+      } else {
+        setTimeout(function() { window.ac(); }, 100);
+        return "Initializing & Spawning Arena Closer...";
+      }
+    };
+    window.spawnAC = window.ac;
+  </script>
+</head>
+<body>
+  <!-- Main Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Start / Main Menu Screen -->
+  <div id="mainMenu" class="overlay-screen active">
+    <div class="menu-card minimal-card">
+      <div class="logo-container">
+        <h1 class="game-logo">POLY<span class="highlight">TANKS</span><span class="suffix">.IO</span></h1>
+        <p class="tagline">Minimalist Battle Arena • Pure Physics</p>
+      </div>
+
+      <div class="form-group">
+        <label for="playerNameInput">Pilot Name</label>
+        <input type="text" id="playerNameInput" maxlength="16" placeholder="Enter Name..." value="CyberTank">
+      </div>
+
+      <div class="menu-actions">
+        <button id="playBtn" class="primary-btn">PLAY GAME</button>
+        <button id="inventoryBtn" class="secondary-btn">ARMORY 🎒</button>
+      </div>
+
+      <div class="dev-auth-bar">
+        <button id="openDevAuthBtn" class="dev-link-btn">🔑 Dev Token</button>
+      </div>
+
+      <div class="controls-guide">
+        <div class="guide-item"><span>WASD</span> Move</div>
+        <div class="guide-item"><span>Left Click</span> Fire & Upgrade</div>
+        <div class="guide-item"><span>1-8</span> Upgrades</div>
+        <div class="guide-item"><span>N</span> Cycle Classes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Armory & Skins Vault Modal -->
+  <div id="inventoryModal" class="overlay-screen hidden">
+    <div class="menu-card modal-card">
+      <div class="modal-header">
+        <h2>ARMORY & VAULT 🎒</h2>
+        <button id="closeInventoryBtn" class="close-btn">&times;</button>
+      </div>
+      <p class="modal-subtitle">Chroma Skins & Loot Chests</p>
+
+      <div class="chest-unboxing-section">
+        <div class="chest-info">
+          <span>Available Chests: <strong id="chestCount">1 Common</strong></span>
+        </div>
+        <button id="openChestBtn" class="primary-btn gold-btn">OPEN CHEST 🎁</button>
+        <div id="unboxingReward" class="unboxing-reward hidden"></div>
+      </div>
+
+      <div class="skins-section">
+        <label class="section-label">SELECT CHROMA SKIN</label>
+        <div id="skinGrid" class="skin-grid"></div>
+      </div>
+
+      <button id="closeInventoryBtn2" class="secondary-btn">CLOSE ARMORY</button>
+    </div>
+  </div>
+
+  <!-- Secret Dev Token Prompt Modal -->
+  <div id="devAuthModal" class="overlay-screen hidden">
+    <div class="menu-card modal-card dev-modal">
+      <div class="modal-header">
+        <h2>DEV AUTHORIZATION 🔑</h2>
+        <button id="closeDevAuthBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="form-group">
+        <label for="devTokenInput">Secret Dev Key</label>
+        <input type="password" id="devTokenInput" placeholder="Enter dev token...">
+      </div>
+      <button id="submitDevTokenBtn" class="primary-btn">UNLOCK DEV TOOLS</button>
+    </div>
+  </div>
+
+  <!-- In-Game HUD -->
+  <div id="gameHUD" class="hud-container hidden">
+    <!-- Top Left: Player Level, XP & Evolution Overlay -->
+    <div class="top-left-hud">
+      <div class="player-info-card">
+        <div class="info-header">
+          <span id="hudPlayerName" class="player-name">Pilot</span>
+          <span id="hudClassName" class="class-badge">Basic Tank</span>
+        </div>
+        <div class="xp-bar-container">
+          <div id="xpBarFill" class="xp-bar-fill"></div>
+          <span id="xpBarText" class="xp-text">Lv 1 • 0 / 100 XP</span>
+        </div>
+        <div class="score-display">Score: <span id="hudScore">0</span></div>
+      </div>
+
+      <div id="evolutionContainer" class="evolution-panel hidden">
+        <div class="evolution-title">LEFT-CLICK TO EVOLVE</div>
+        <div id="evolutionOptions" class="evolution-grid"></div>
+      </div>
+    </div>
+
+    <!-- Top Right: Leaderboard -->
+    <div class="top-right-hud">
+      <div class="leaderboard-card">
+        <div class="lb-title">LEADERBOARD</div>
+        <ol id="leaderboardList" class="lb-list"></ol>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Stat Upgrade Tree -->
+    <div class="bottom-left-hud">
+      <div id="statUpgradePanel" class="stat-panel">
+        <div class="stat-panel-header">
+          <span>LEFT-CLICK TO UPGRADE</span>
+          <span id="availablePoints" class="points-badge">1 Point</span>
+        </div>
+        <div id="statList" class="stat-list"></div>
+      </div>
+    </div>
+
+    <!-- Dev Testing Toolbar -->
+    <div id="devToolbar" class="top-center-hud hidden">
+      <div class="dev-toolbar">
+        <span class="dev-label">DEV TOOLS:</span>
+        <button id="devXpBtn" class="dev-btn">+5,000 XP [K]</button>
+        <button id="devMaxBtn" class="dev-btn">LVL 45 [L]</button>
+        <button id="devClassBtn" class="dev-btn">CYCLE CLASS [N]</button>
+        <button id="devGodBtn" class="dev-btn">GOD MODE [M]</button>
+      </div>
+    </div>
+
+    <!-- Bottom Right: Minimap Canvas -->
+    <div class="bottom-right-hud">
+      <div class="minimap-card">
+        <canvas id="minimapCanvas" width="130" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- Kill Feed -->
+    <div id="killFeed" class="kill-feed"></div>
+  </div>
+
+  <!-- Game Over Screen Overlay -->
+  <div id="gameOverMenu" class="overlay-screen hidden">
+    <div class="menu-card game-over-card slide-in">
+      <h2 class="game-over-title">TANK DESTROYED</h2>
+      <p id="killedByText" class="killed-by">Killed by an Enemy Tank</p>
+      
+      <div class="stats-summary">
+        <div class="stat-box slide-stat-1">
+          <span class="stat-val" id="finalScore">0</span>
+          <span class="stat-lbl">Final Score</span>
+        </div>
+        <div class="stat-box slide-stat-2">
+          <span class="stat-val" id="finalLevel">1</span>
+          <span class="stat-lbl">Level Reached</span>
+        </div>
+        <div class="stat-box slide-stat-3">
+          <span class="stat-val" id="finalKills">0</span>
+          <span class="stat-lbl">Tanks Destroyed</span>
+        </div>
+        <div class="stat-box slide-stat-4">
+          <span class="stat-val" id="finalTime">0:00</span>
+          <span class="stat-lbl">Survival Time</span>
+        </div>
+      </div>
+
+      <button id="respawnBtn" class="primary-btn">RESPAWN</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
