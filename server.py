@@ -18,7 +18,6 @@ players = {}
 shapes = []
 bullets = []
 
-# 1. Deterministic Shape Generator with Diep.io Ambient Floating Movement
 def init_shapes():
     global shapes
     shapes = []
@@ -46,7 +45,6 @@ def init_shapes():
 
 init_shapes()
 
-# HTTP File Server
 class GameHTTPRequestHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
@@ -61,7 +59,6 @@ def start_http_server():
 http_thread = threading.Thread(target=start_http_server, daemon=True)
 http_thread.start()
 
-# WebSocket Connection Handler
 async def handler(websocket):
     player_id = f"player_{random.randint(10000, 99999)}"
     clients.add(websocket)
@@ -70,8 +67,8 @@ async def handler(websocket):
         'id': player_id,
         'name': 'Pilot',
         'color': '#00b2e7',
-        'x': random.uniform(1000, ARENA_WIDTH - 1000),
-        'y': random.uniform(1000, ARENA_HEIGHT - 1000),
+        'x': random.uniform(3000, 4000),
+        'y': random.uniform(3000, 4000),
         'radius': 26,
         'angle': 0,
         'score': 0,
@@ -90,7 +87,6 @@ async def handler(websocket):
         'shapes': shapes
     })
     await websocket.send(init_msg)
-    print(f"Player connected: {player_id} (Total online: {len(players)})")
 
     try:
         async for message in websocket:
@@ -116,23 +112,25 @@ async def handler(websocket):
                     if p:
                         p['hp'] = 100
                         p['maxHp'] = 100
-                        p['x'] = data.get('x', random.uniform(1000, ARENA_WIDTH - 1000))
-                        p['y'] = data.get('y', random.uniform(1000, ARENA_HEIGHT - 1000))
+                        p['x'] = data.get('x', random.uniform(3000, 4000))
+                        p['y'] = data.get('y', random.uniform(3000, 4000))
                         p['score'] = 0
                         p['level'] = 1
                         p['classId'] = 'basic'
 
                 elif msg_type == 'SHOOT':
+                    radius = data.get('radius', 8)
                     bullets.append({
                         'id': f"b_{random.randint(100000, 999999)}",
                         'x': data.get('x'),
                         'y': data.get('y'),
                         'vx': data.get('vx'),
                         'vy': data.get('vy'),
-                        'radius': data.get('radius', 8),
+                        'radius': radius,
                         'color': data.get('color', '#00b2e7'),
                         'ownerId': player_id,
-                        'life': 80
+                        'life': 80,
+                        'hp': radius * 3.5
                     })
             except Exception:
                 pass
@@ -142,27 +140,22 @@ async def handler(websocket):
         clients.discard(websocket)
         if player_id in players:
             del players[player_id]
-        print(f"Player disconnected: {player_id}")
 
-# 60 Hz Authoritative Server Physics Loop
 async def broadcast_loop():
     global bullets
     rng = random.Random()
 
     while True:
-        # 0. Update Ambient Diep.io Shape Floating Drift
+        # Ambient shape drift
         for s in shapes:
             s['x'] += s.get('vx', 0)
             s['y'] += s.get('vy', 0)
-            if s['x'] < 100 or s['x'] > ARENA_WIDTH - 100:
-                s['vx'] = -s.get('vx', 0)
-            if s['y'] < 100 or s['y'] > ARENA_HEIGHT - 100:
-                s['vy'] = -s.get('vy', 0)
+            if s['x'] < 100 or s['x'] > ARENA_WIDTH - 100: s['vx'] = -s.get('vx', 0)
+            if s['y'] < 100 or s['y'] > ARENA_HEIGHT - 100: s['vy'] = -s.get('vy', 0)
 
-        # 1. Update Hard Solid Tank-Shape Ramming & Collisions
+        # Soft Pleasant Tank-Shape Ramming
         for p_id, p in players.items():
-            if p.get('classId') == 'arena_closer':
-                continue
+            if p.get('classId') == 'arena_closer': continue
 
             for s in shapes:
                 dx = s['x'] - p['x']
@@ -176,10 +169,12 @@ async def broadcast_loop():
                     ny = dy / dist
                     overlap = min_dist - dist
 
-                    s['x'] += nx * overlap * 0.5
-                    s['y'] += ny * overlap * 0.5
+                    s['x'] += nx * overlap * 0.35
+                    s['y'] += ny * overlap * 0.35
+                    p['x'] -= nx * overlap * 0.35
+                    p['y'] -= ny * overlap * 0.35
 
-                    p['hp'] = max(0, p['hp'] - 0.5)
+                    p['hp'] = max(0, p['hp'] - 0.4)
                     s['hp'] -= 10
                     if s['hp'] <= 0:
                         s['x'] = rng.uniform(100, ARENA_WIDTH - 100)
@@ -187,17 +182,15 @@ async def broadcast_loop():
                         s['hp'] = s['maxHp']
                         p['score'] += 100
 
-        # 2. Update Bullets, Shape Damage & PVP Player Damage (Divided by 2)
+        # Bullet Health & Piercing Mechanics
         new_bullets = []
         for b in bullets:
             b['x'] += b['vx']
             b['y'] += b['vy']
             b['life'] -= 1
 
-            if b['life'] > 0 and 0 <= b['x'] <= ARENA_WIDTH and 0 <= b['y'] <= ARENA_HEIGHT:
-                hit = False
-
-                # PVP Player Bullet Damage (Divided by 2)
+            if b['life'] > 0 and b.get('hp', 10) > 0 and 0 <= b['x'] <= ARENA_WIDTH and 0 <= b['y'] <= ARENA_HEIGHT:
+                # PVP Player Damage
                 for target_id, target_p in players.items():
                     if target_id != b['ownerId'] and target_p.get('classId') != 'arena_closer':
                         p_dx = target_p['x'] - b['x']
@@ -205,39 +198,35 @@ async def broadcast_loop():
                         if p_dx*p_dx + p_dy*p_dy < (target_p['radius'] + b['radius'])**2:
                             dmg = 18 if b.get('radius', 8) > 20 else 10
                             target_p['hp'] = max(0, target_p['hp'] - dmg)
-                            hit = True
+                            b['hp'] -= 20
                             if target_p['hp'] <= 0:
                                 shooter = players.get(b['ownerId'])
-                                if shooter:
-                                    shooter['score'] += int(target_p['score'] * 0.5) + 500
+                                if shooter: shooter['score'] += int(target_p['score'] * 0.5) + 500
                             break
 
-                if not hit:
-                    # Shape Bullet Damage (Divided by 2: 18 to 30 HP damage)
-                    shooter = players.get(b['ownerId'])
-                    is_ac = shooter and shooter.get('classId') == 'arena_closer'
-                    bullet_dmg = 500 if is_ac else (30 if b.get('radius', 8) > 18 else 18)
+                # Shape Damage & Bullet HP Subtraction
+                shooter = players.get(b['ownerId'])
+                is_ac = shooter and shooter.get('classId') == 'arena_closer'
+                bullet_dmg = 500 if is_ac else (30 if b.get('radius', 8) > 18 else 18)
 
-                    for s in shapes:
-                        dx = s['x'] - b['x']
-                        dy = s['y'] - b['y']
-                        if dx*dx + dy*dy < (s['radius'] + b['radius'])**2:
-                            s['hp'] -= bullet_dmg
-                            hit = True
-                            if s['hp'] <= 0:
-                                s['x'] = rng.uniform(100, ARENA_WIDTH - 100)
-                                s['y'] = rng.uniform(100, ARENA_HEIGHT - 100)
-                                s['hp'] = s['maxHp']
-                                if owner:
-                                    owner['score'] += 100
-                            break
+                for s in shapes:
+                    dx = s['x'] - b['x']
+                    dy = s['y'] - b['y']
+                    if dx*dx + dy*dy < (s['radius'] + b['radius'])**2:
+                        s['hp'] -= bullet_dmg
+                        target_density = 40 if s['type'] == 'alpha_pentagon' else (20 if s['type'] == 'pentagon' else (12 if s['type'] == 'triangle' else 8))
+                        b['hp'] -= target_density
+                        if s['hp'] <= 0:
+                            s['x'] = rng.uniform(100, ARENA_WIDTH - 100)
+                            s['y'] = rng.uniform(100, ARENA_HEIGHT - 100)
+                            s['hp'] = s['maxHp']
+                            if shooter: shooter['score'] += 100
 
-                if not hit:
+                if b.get('hp', 0) > 0 and b['life'] > 0:
                     new_bullets.append(b)
 
         bullets = new_bullets
 
-        # 3. Broadcast 60 Hz Snapshot
         if clients:
             snapshot = json.dumps({
                 'type': 'UPDATE',
@@ -250,7 +239,6 @@ async def broadcast_loop():
         await asyncio.sleep(0.016)
 
 async def main():
-    print(f"WebSocket Server starting on ws://localhost:{WS_PORT}...")
     async with websockets.serve(handler, "0.0.0.0", WS_PORT):
         await broadcast_loop()
 
@@ -258,4 +246,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nServer stopped.")
+        pass

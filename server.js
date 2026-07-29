@@ -39,7 +39,6 @@ function initShapes() {
     const x = 100 + Math.abs(seedX) * (ARENA_WIDTH - 200);
     const y = 100 + Math.abs(seedY) * (ARENA_HEIGHT - 200);
 
-    // Diep.io ambient floating drift velocities
     const vx = (Math.sin(i * 45.12) * 0.4);
     const vy = (Math.cos(i * 45.12) * 0.4);
 
@@ -62,8 +61,8 @@ wss.on('connection', (ws) => {
     id: playerId,
     name: 'Pilot',
     color: '#00b2e7',
-    x: 1000 + Math.random() * (ARENA_WIDTH - 2000),
-    y: 1000 + Math.random() * (ARENA_HEIGHT - 2000),
+    x: 3000 + Math.random() * 1000,
+    y: 3000 + Math.random() * 1000,
     radius: 26,
     angle: 0,
     score: 0,
@@ -101,22 +100,24 @@ wss.on('connection', (ws) => {
       } else if (data.type === 'RESPAWN') {
         player.hp = 100;
         player.maxHp = 100;
-        player.x = data.x || (1000 + Math.random() * (ARENA_WIDTH - 2000));
-        player.y = data.y || (1000 + Math.random() * (ARENA_HEIGHT - 2000));
+        player.x = data.x || (3000 + Math.random() * 1000);
+        player.y = data.y || (3000 + Math.random() * 1000);
         player.score = 0;
         player.level = 1;
         player.classId = 'basic';
       } else if (data.type === 'SHOOT') {
+        const radius = data.radius || 8;
         bullets.push({
           id: `b_${Math.floor(100000 + Math.random() * 900000)}`,
           x: data.x,
           y: data.y,
           vx: data.vx,
           vy: data.vy,
-          radius: data.radius || 8,
+          radius,
           color: data.color || '#00b2e7',
           ownerId: playerId,
-          life: 80
+          life: 80,
+          hp: radius * 3.5 // Bullet Health Pool (pierces multiple shapes!)
         });
       }
     } catch (e) {}
@@ -130,17 +131,16 @@ wss.on('connection', (ws) => {
 
 // 60 Hz Server Physics Loop
 setInterval(() => {
-  // 0. Update Diep.io Ambient Shape Floating Movement
+  // 0. Update Ambient Diep.io Shape Floating Movement
   shapes.forEach((s) => {
     s.x += s.vx;
     s.y += s.vy;
 
-    // Bounce off arena walls
     if (s.x < 100 || s.x > ARENA_WIDTH - 100) s.vx = -s.vx;
     if (s.y < 100 || s.y > ARENA_HEIGHT - 100) s.vy = -s.vy;
   });
 
-  // 1. Tank-Shape Ramming & Collisions
+  // 1. Soft Pleasant Tank-Shape Ramming & Collisions
   players.forEach((p) => {
     if (p.classId === 'arena_closer') return;
 
@@ -156,11 +156,13 @@ setInterval(() => {
         const ny = dy / dist;
         const overlap = minDist - dist;
 
-        s.x += nx * overlap * 0.5;
-        s.y += ny * overlap * 0.5;
+        // Soft pleasant cushion displacement (sepFactor = 0.65)
+        s.x += nx * overlap * 0.35;
+        s.y += ny * overlap * 0.35;
+        p.x -= nx * overlap * 0.35;
+        p.y -= ny * overlap * 0.35;
 
-        // Divided contact damage by 2 (0.5 HP per contact frame)
-        p.hp = Math.max(0, p.hp - 0.5);
+        p.hp = Math.max(0, p.hp - 0.4);
         s.hp -= 10;
 
         if (s.hp <= 0) {
@@ -173,17 +175,15 @@ setInterval(() => {
     });
   });
 
-  // 2. Bullets & PVP Collisions (Divided damage by 2)
+  // 2. Bullets & Bullet HP Penetration Mechanics
   const newBullets = [];
   bullets.forEach((b) => {
     b.x += b.vx;
     b.y += b.vy;
     b.life -= 1;
 
-    if (b.life > 0 && b.x >= 0 && b.x <= ARENA_WIDTH && b.y >= 0 && b.y <= ARENA_HEIGHT) {
-      let hit = false;
-
-      // PVP Damage (Divided by 2: 10 to 18 HP damage)
+    if (b.life > 0 && b.hp > 0 && b.x >= 0 && b.x <= ARENA_WIDTH && b.y >= 0 && b.y <= ARENA_HEIGHT) {
+      // PVP Player Bullet Damage
       players.forEach((targetP, targetId) => {
         if (targetId !== b.ownerId && targetP.classId !== 'arena_closer') {
           const dx = targetP.x - b.x;
@@ -191,7 +191,7 @@ setInterval(() => {
           if (dx * dx + dy * dy < (targetP.radius + b.radius) ** 2) {
             const dmg = b.radius > 20 ? 18 : 10;
             targetP.hp = Math.max(0, targetP.hp - dmg);
-            hit = true;
+            b.hp -= 20; // Subtract HP from bullet upon hitting player
             if (targetP.hp <= 0) {
               const shooter = players.get(b.ownerId);
               if (shooter) shooter.score += Math.floor(targetP.score * 0.5) + 500;
@@ -200,34 +200,39 @@ setInterval(() => {
         }
       });
 
-      if (!hit) {
-        // Shape Damage (Divided by 2: 18 to 30 HP damage)
-        const shooter = players.get(b.ownerId);
-        const isAc = shooter && shooter.classId === 'arena_closer';
-        const dmg = isAc ? 500 : (b.radius > 18 ? 30 : 18);
+      // Shape Bullet Damage & Piercing
+      const shooter = players.get(b.ownerId);
+      const isAc = shooter && shooter.classId === 'arena_closer';
+      const dmg = isAc ? 500 : (b.radius > 18 ? 30 : 18);
 
-        shapes.forEach((s) => {
-          const dx = s.x - b.x;
-          const dy = s.y - b.y;
-          if (dx * dx + dy * dy < (s.radius + b.radius) ** 2) {
-            s.hp -= dmg;
-            hit = true;
-            if (s.hp <= 0) {
-              s.x = 100 + Math.random() * (ARENA_WIDTH - 200);
-              s.y = 100 + Math.random() * (ARENA_HEIGHT - 200);
-              s.hp = s.maxHp;
-              if (shooter) shooter.score += 100;
-            }
+      shapes.forEach((s) => {
+        const dx = s.x - b.x;
+        const dy = s.y - b.y;
+        if (dx * dx + dy * dy < (s.radius + b.radius) ** 2) {
+          s.hp -= dmg;
+          
+          // Bullet loses HP based on shape density, but only dies if b.hp <= 0!
+          const targetDensity = s.type === 'alpha_pentagon' ? 40 : (s.type === 'pentagon' ? 20 : (s.type === 'triangle' ? 12 : 8));
+          b.hp -= targetDensity;
+
+          if (s.hp <= 0) {
+            s.x = 100 + Math.random() * (ARENA_WIDTH - 200);
+            s.y = 100 + Math.random() * (ARENA_HEIGHT - 200);
+            s.hp = s.maxHp;
+            if (shooter) shooter.score += 100;
           }
-        });
-      }
+        }
+      });
 
-      if (!hit) newBullets.push(b);
+      // Keep bullet active if it still has health and lifespan left!
+      if (b.hp > 0 && b.life > 0) {
+        newBullets.push(b);
+      }
     }
   });
   bullets = newBullets;
 
-  // Broadcast Snapshot to all clients
+  // Broadcast 60 Hz Snapshot
   const snapshot = JSON.stringify({
     type: 'UPDATE',
     players: Array.from(players.values()),

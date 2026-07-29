@@ -1,12 +1,12 @@
 import { STAT_TYPES } from '../systems/UpgradeSystem.js';
 import { TANK_CLASSES } from '../systems/ClassSystem.js';
-import { ArmorySystem, SKINS } from '../systems/ArmorySystem.js';
+import { ShopSystem, SHOP_ITEMS } from '../systems/ShopSystem.js';
 import { DevTokenSystem } from '../systems/DevTokenSystem.js';
 
 export class HUDManager {
   constructor(game) {
     this.game = game;
-    this.armorySystem = new ArmorySystem();
+    this.shopSystem = new ShopSystem();
     this.devTokenSystem = new DevTokenSystem();
 
     this.mainMenu = document.getElementById('mainMenu');
@@ -18,11 +18,8 @@ export class HUDManager {
     this.playBtn = document.getElementById('playBtn');
     this.inventoryBtn = document.getElementById('inventoryBtn');
     this.closeInventoryBtn = document.getElementById('closeInventoryBtn');
-    this.closeInventoryBtn2 = document.getElementById('closeInventoryBtn2');
-    this.openChestBtn = document.getElementById('openChestBtn');
-    this.chestCountEl = document.getElementById('chestCount');
-    this.unboxingRewardEl = document.getElementById('unboxingReward');
-    this.skinGridEl = document.getElementById('skinGrid');
+    this.shopGridEl = document.getElementById('shopGrid');
+    this.starBalanceEl = document.getElementById('starBalance');
 
     this.openDevAuthBtn = document.getElementById('openDevAuthBtn');
     this.closeDevAuthBtn = document.getElementById('closeDevAuthBtn');
@@ -73,13 +70,13 @@ export class HUDManager {
   initEventListeners() {
     this.playBtn.addEventListener('click', () => {
       const name = this.playerNameInput.value.trim() || 'Tank';
-      const skinColor = this.armorySystem.EquippedSkin.color;
+      const skinColor = this.shopSystem.EquippedSkin.colors ? this.shopSystem.EquippedSkin.colors[0] : '#00b2e7';
       this.game.startGame(name, skinColor);
     });
 
-    // Armory Modal
+    // Shop Modal
     this.inventoryBtn.addEventListener('click', () => {
-      this.renderArmoryVault();
+      this.renderShopMarketplace();
       this.inventoryModal.classList.remove('hidden');
       this.inventoryModal.classList.add('active');
     });
@@ -87,24 +84,6 @@ export class HUDManager {
     this.closeInventoryBtn.addEventListener('click', () => {
       this.inventoryModal.classList.remove('active');
       this.inventoryModal.classList.add('hidden');
-    });
-
-    this.closeInventoryBtn2.addEventListener('click', () => {
-      this.inventoryModal.classList.remove('active');
-      this.inventoryModal.classList.add('hidden');
-    });
-
-    // Open Chest
-    this.openChestBtn.addEventListener('click', () => {
-      const wonSkin = this.armorySystem.openChest('common');
-      if (wonSkin) {
-        this.unboxingRewardEl.innerText = `✨ UNBOXED: ${wonSkin.name} (${wonSkin.rarity})!`;
-        this.unboxingRewardEl.classList.remove('hidden');
-        this.renderArmoryVault();
-      } else {
-        this.unboxingRewardEl.innerText = `No chests available! Defeat bosses or shapes.`;
-        this.unboxingRewardEl.classList.remove('hidden');
-      }
     });
 
     // Dev Token Modal
@@ -132,7 +111,7 @@ export class HUDManager {
 
     this.respawnBtn.addEventListener('click', () => {
       const name = this.playerNameInput.value.trim() || 'Tank';
-      const skinColor = this.armorySystem.EquippedSkin.color;
+      const skinColor = this.shopSystem.EquippedSkin.colors ? this.shopSystem.EquippedSkin.colors[0] : '#00b2e7';
       this.game.startGame(name, skinColor);
     });
 
@@ -173,36 +152,58 @@ export class HUDManager {
     }
   }
 
-  renderArmoryVault() {
-    const count = this.armorySystem.chests.common || 0;
-    this.chestCountEl.innerText = `${count} Common Chest${count === 1 ? '' : 's'}`;
+  renderShopMarketplace() {
+    this.starBalanceEl.innerText = this.shopSystem.stars.toLocaleString();
+    this.shopGridEl.innerHTML = '';
 
-    this.skinGridEl.innerHTML = '';
-    SKINS.forEach(skin => {
-      const isUnlocked = this.armorySystem.unlockedSkins.has(skin.id);
-      const isEquipped = this.armorySystem.equippedSkinId === skin.id;
+    const colorsList = ['#d32f2f', '#d32f2f', '#00acc1', '#8e24aa', '#0097a7', '#e91e63', '#e91e63', '#d81b60', '#0097a7', '#00838f'];
+
+    SHOP_ITEMS.forEach((item, idx) => {
+      const isUnlocked = this.shopSystem.unlockedItems.has(item.id);
+      const isEquipped = (this.shopSystem.equippedSkinId === item.id) ||
+                         (this.shopSystem.equippedEffectId === item.id) ||
+                         (this.shopSystem.equippedPetId === item.id);
 
       const card = document.createElement('div');
-      card.className = `skin-card ${isEquipped ? 'equipped' : ''} ${!isUnlocked ? 'locked' : ''}`;
+      card.className = `florr-item-card ${isEquipped ? 'equipped' : ''}`;
+
+      let priceLabel = `⭐ ${item.price >= 1000000 ? (item.price / 1000000) + 'm' : (item.price >= 1000 ? (item.price / 1000) + 'k' : item.price)}`;
+      let btnClass = 'florr-price-btn';
+
+      if (isEquipped) {
+        priceLabel = 'EQUIPPED';
+        btnClass += ' equipped-btn';
+      } else if (isUnlocked) {
+        priceLabel = 'EQUIP';
+        btnClass += ' owned-btn';
+      }
+
+      const cardColor = colorsList[idx % colorsList.length];
+
       card.innerHTML = `
-        <span class="skin-icon">${skin.icon}</span>
-        <div class="skin-details">
-          <span class="skin-name">${skin.name}</span>
-          <span class="skin-rarity" style="color: ${skin.color}">${isUnlocked ? (isEquipped ? 'EQUIPPED' : skin.rarity) : 'LOCKED'}</span>
+        ${item.discount ? `<div class="florr-discount-tag">${item.discount}</div>` : ''}
+        <div class="florr-icon-box" style="background: ${cardColor};">
+          <span class="florr-icon-emoji">${item.icon}</span>
         </div>
+        <div class="florr-item-name">${item.name}</div>
+        <button class="${btnClass}">${priceLabel}</button>
       `;
 
       card.addEventListener('click', () => {
-        if (isUnlocked) {
-          this.armorySystem.equipSkin(skin.id);
-          if (this.game.player) {
-            this.game.player.color = skin.color;
+        if (!isUnlocked) {
+          if (this.shopSystem.buyItem(item.id)) {
+            this.addKillFeedMessage(`✨ Purchased ${item.name}!`);
+            this.renderShopMarketplace();
+          } else {
+            alert('Not enough Stars! Complete challenges to earn stars.');
           }
-          this.renderArmoryVault();
+        } else {
+          this.shopSystem.equipItem(item.id);
+          this.renderShopMarketplace();
         }
       });
 
-      this.skinGridEl.appendChild(card);
+      this.shopGridEl.appendChild(card);
     });
   }
 

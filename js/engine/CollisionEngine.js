@@ -27,7 +27,7 @@ export class CollisionEngine {
     }
   }
 
-  // Hard Solid Diep Collision (Tanks and shapes CANNOT pass through each other!)
+  // Soft Pleasant Diep Collision (Smooth elastic cushion response)
   resolveElasticCollision(e1, e2, dt = 1) {
     if (e1.dead || e2.dead) return;
 
@@ -42,31 +42,31 @@ export class CollisionEngine {
     const nx = dx / dist;
     const ny = dy / dist;
 
-    // 1. 100% Hard Solid Separation (Prevents clipping through shapes or tanks)
+    // Smooth soft displacement cushion
     const overlap = minDist - dist;
     const totalMass = e1.mass + e2.mass;
 
     const m1Ratio = e2.mass / totalMass;
     const m2Ratio = e1.mass / totalMass;
 
-    const sepFactor = 1.0; // 100% Hard Solid Boundary Separation
+    const sepFactor = 0.65; // Soft pleasant cushion separation
     e1.pos.x -= nx * overlap * m1Ratio * sepFactor;
     e1.pos.y -= ny * overlap * m1Ratio * sepFactor;
     e2.pos.x += nx * overlap * m2Ratio * sepFactor;
     e2.pos.y += ny * overlap * m2Ratio * sepFactor;
 
-    // 2. Gentle momentum exchange
+    // Gentle momentum exchange
     const rvx = e2.vel.x - e1.vel.x;
     const rvy = e2.vel.y - e1.vel.y;
     const velAlongNormal = rvx * nx + rvy * ny;
 
-    const restitution = 0.1;
+    const restitution = 0.15;
 
     if (velAlongNormal < 0) {
       const impulseMag = -(1 + restitution) * velAlongNormal / (1 / e1.mass + 1 / e2.mass);
 
-      const impulseX = impulseMag * nx * 0.4;
-      const impulseY = impulseMag * ny * 0.4;
+      const impulseX = impulseMag * nx * 0.35;
+      const impulseY = impulseMag * ny * 0.35;
 
       e1.vel.x -= impulseX / e1.mass;
       e1.vel.y -= impulseY / e1.mass;
@@ -78,13 +78,14 @@ export class CollisionEngine {
   }
 
   applyContactDamage(e1, e2, dt = 1) {
-    const dmg1 = (e1.bodyDamage || 5) * dt * 0.25;
-    const dmg2 = (e2.bodyDamage || 5) * dt * 0.25;
+    const dmg1 = (e1.bodyDamage || 5) * dt * 0.2;
+    const dmg2 = (e2.bodyDamage || 5) * dt * 0.2;
 
     e1.takeDamage(dmg2, e2);
     e2.takeDamage(dmg1, e1);
   }
 
+  // Bullet Health & Penetration Collision
   resolveBulletImpact(bullet, target, game) {
     if (bullet.dead || target.dead || bullet.owner === target) return;
 
@@ -98,7 +99,7 @@ export class CollisionEngine {
       const nx = dx / dist;
       const ny = dy / dist;
 
-      const knockbackForce = bullet.speed * bullet.penetration * 0.04;
+      const knockbackForce = bullet.speed * bullet.penetration * 0.03;
       target.vel.x += nx * (knockbackForce / target.mass);
       target.vel.y += ny * (knockbackForce / target.mass);
 
@@ -106,7 +107,7 @@ export class CollisionEngine {
       const damageToBullet = target.bodyDamage || 10;
 
       target.takeDamage(damageToTarget, bullet.owner);
-      bullet.health -= damageToBullet;
+      bullet.health -= damageToBullet; // Subtract target density from bullet HP
 
       if (game && game.particleManager) {
         game.particleManager.spawnSparks(bullet.pos.x, bullet.pos.y, nx, ny, bullet.color, 4);
@@ -116,6 +117,7 @@ export class CollisionEngine {
         game.soundEngine.playHitSound(target.type === 'shape');
       }
 
+      // Bullet dies only when health drops to 0 or below
       if (bullet.health <= 0) {
         bullet.dead = true;
       }

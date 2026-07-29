@@ -42,7 +42,7 @@
 
       <div class="menu-actions">
         <button id="playBtn" class="primary-btn">PLAY GAME</button>
-        <button id="inventoryBtn" class="secondary-btn">ARMORY 🎒</button>
+        <button id="inventoryBtn" class="secondary-btn">SHOP 🛒</button>
       </div>
 
       <div class="dev-auth-bar">
@@ -58,29 +58,36 @@
     </div>
   </div>
 
-  <!-- Armory & Skins Vault Modal -->
+  <!-- Florr.io Styled Bright Green Shop Modal -->
   <div id="inventoryModal" class="overlay-screen hidden">
-    <div class="menu-card modal-card">
-      <div class="modal-header">
-        <h2>ARMORY & VAULT 🎒</h2>
-        <button id="closeInventoryBtn" class="close-btn">&times;</button>
+    <div class="florr-shop-card">
+      <div class="florr-top-bar">
+        <h2 class="florr-title">Shop</h2>
+        <button id="closeInventoryBtn" class="florr-close-btn">&times;</button>
       </div>
-      <p class="modal-subtitle">Chroma Skins & Loot Chests</p>
 
-      <div class="chest-unboxing-section">
-        <div class="chest-info">
-          <span>Available Chests: <strong id="chestCount">1 Common</strong></span>
+      <div class="florr-tabs">
+        <button class="florr-tab-btn active">Shop</button>
+        <button class="florr-tab-btn">Challenge</button>
+        <button class="florr-tab-btn">Bonus</button>
+      </div>
+
+      <div class="florr-subheader">
+        <span>Today's offers:</span>
+        <div class="florr-subheader-sub">Store will change in 17 hours</div>
+      </div>
+
+      <!-- Item Cards Grid -->
+      <div id="shopGrid" class="florr-grid"></div>
+
+      <div class="florr-footer">
+        <div class="florr-footer-desc">
+          You gain stars by completing challenges, or you can buy some by clicking the number on the right.
         </div>
-        <button id="openChestBtn" class="primary-btn gold-btn">OPEN CHEST 🎁</button>
-        <div id="unboxingReward" class="unboxing-reward hidden"></div>
+        <div class="florr-star-badge">
+          <span>⭐</span> <span id="starBalance">2141</span>
+        </div>
       </div>
-
-      <div class="skins-section">
-        <label class="section-label">SELECT CHROMA SKIN</label>
-        <div id="skinGrid" class="skin-grid"></div>
-      </div>
-
-      <button id="closeInventoryBtn2" class="secondary-btn">CLOSE ARMORY</button>
     </div>
   </div>
 
