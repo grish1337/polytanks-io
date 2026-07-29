@@ -25,13 +25,26 @@ export class UpgradeSystem {
     this.availablePoints = 1;
   }
 
+  getMultiplier(statId) {
+    const val = this.stats[statId] || 0;
+    if (statId === 'movementSpeed') return 1 + val * 0.10;
+    if (statId === 'reloadSpeed') return 1 + val * 0.20;
+    if (statId === 'bulletDamage') return 1 + val * 0.22;
+    if (statId === 'bulletSpeed') return 1 + val * 0.15;
+    if (statId === 'bulletPenetration') return 1 + val * 0.25;
+    if (statId === 'maxHealth') return 1 + val * 0.20;
+    if (statId === 'healthRegen') return 1 + val * 0.25;
+    if (statId === 'bodyDamage') return 1 + val * 0.20;
+    return 1.0;
+  }
+
   addPoint(statId) {
     if (this.availablePoints > 0 && this.stats[statId] !== undefined) {
       const info = STAT_TYPES.find(s => s.id === statId);
       if (info && this.stats[statId] < info.max) {
         this.stats[statId]++;
         this.availablePoints--;
-        this.applyStatsToTank();
+        if (this.tank) this.applyStatsToTank();
         return true;
       }
     }
@@ -39,6 +52,7 @@ export class UpgradeSystem {
   }
 
   applyStatsToTank() {
+    if (!this.tank) return;
     const baseHp = 100;
     this.tank.maxHealth = baseHp + this.stats.maxHealth * 20;
     if (this.tank.health > this.tank.maxHealth) {

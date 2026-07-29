@@ -135,14 +135,17 @@ export class InputManager {
       moveY *= 0.7071;
     }
 
-    const speedStat = (player.upgradeSystem ? player.upgradeSystem.getMultiplier('movementSpeed') : 1.0);
-    let moveSpeedMultiplier = 2.4 * speedStat;
+    const speedStat = (player.upgradeSystem && typeof player.upgradeSystem.getMultiplier === 'function')
+      ? player.upgradeSystem.getMultiplier('movementSpeed')
+      : 1.0;
+
+    let moveSpeed = 4.5 * speedStat;
     if (player.classInfo && player.classInfo.id === 'arena_closer') {
-      moveSpeedMultiplier *= 2.5;
+      moveSpeed *= 2.5;
     }
 
-    player.vel.x += moveX * moveSpeedMultiplier * 0.8;
-    player.vel.y += moveY * moveSpeedMultiplier * 0.8;
+    player.pos.x += moveX * moveSpeed;
+    player.pos.y += moveY * moveSpeed;
 
     if (player.autoSpin) {
       player.angle += 0.05;
