@@ -220,9 +220,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   color: #fff;
 }
 
-/* ============================================================
-   FLORR.IO STYLED SHOP MODAL (Vibrant Green Cosmetic Marketplace)
-   ============================================================ */
+/* FLORR.IO STYLED SHOP MODAL */
 .florr-shop-card {
   width: 720px;
   background: linear-gradient(180deg, #74dc48, #52c234);
@@ -302,12 +300,6 @@ input[type="text"]:focus, input[type="password"]:focus {
   position: relative;
 }
 
-.florr-subheader-sub {
-  font-size: 0.8rem;
-  font-weight: 700;
-  opacity: 0.9;
-}
-
 .florr-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -363,10 +355,6 @@ input[type="text"]:focus, input[type="password"]:focus {
   position: relative;
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.25);
   border: 2px solid rgba(0, 0, 0, 0.2);
-}
-
-.florr-icon-emoji {
-  font-size: 2rem;
 }
 
 .florr-item-name {
@@ -434,7 +422,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   color: #ffffff;
 }
 
-/* HUD Layout */
+/* HUD Layout (Clean Transparent Mouse Pointer Flow) */
 .hud-container {
   position: absolute;
   top: 0;
@@ -442,15 +430,20 @@ input[type="text"]:focus, input[type="password"]:focus {
   width: 100vw;
   height: 100vh;
   z-index: 10;
-  pointer-events: none;
-}
-
-.hud-container * {
-  pointer-events: auto;
+  pointer-events: none !important;
 }
 
 .hud-container.hidden {
   display: none;
+}
+
+.top-left-hud, .top-center-hud, .top-right-hud, .bottom-left-hud, .bottom-right-hud, .kill-feed {
+  pointer-events: none !important;
+}
+
+/* Enable pointer events ONLY on interactive HUD buttons and cards */
+.evo-card, .stat-row, .stat-add-btn, .dev-btn, button, input {
+  pointer-events: auto !important;
 }
 
 .top-left-hud {
@@ -470,6 +463,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  pointer-events: auto;
 }
 
 .info-header {
@@ -543,6 +537,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  pointer-events: auto;
 }
 
 .evolution-panel.hidden {
@@ -599,6 +594,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+  pointer-events: auto;
 }
 
 .dev-label {
@@ -634,6 +630,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   border-radius: 6px;
   width: 190px;
   padding: 8px 10px;
+  pointer-events: auto;
 }
 
 .lb-title {
@@ -688,6 +685,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  pointer-events: auto;
 }
 
 .stat-panel-header {
@@ -791,6 +789,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   background: rgba(0, 0, 0, 0.3);
   padding: 4px;
   border-radius: 4px;
+  pointer-events: auto;
 }
 
 #minimapCanvas {

@@ -53,27 +53,10 @@ function initShapes() {
 }
 initShapes();
 
-// WebSocket Handler
+// WebSocket Handler (Only spawn players in arena when they click PLAY GAME!)
 wss.on('connection', (ws) => {
   const playerId = `player_${Math.floor(10000 + Math.random() * 90000)}`;
-  
-  const player = {
-    id: playerId,
-    name: 'Pilot',
-    color: '#00b2e7',
-    x: 3000 + Math.random() * 1000,
-    y: 3000 + Math.random() * 1000,
-    radius: 26,
-    angle: 0,
-    score: 0,
-    level: 1,
-    hp: 100,
-    maxHp: 100,
-    classId: 'basic'
-  };
-
   clients.set(ws, playerId);
-  players.set(playerId, player);
 
   ws.send(JSON.stringify({
     type: 'INIT',
@@ -86,25 +69,66 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message.toString());
-      
-      if (data.type === 'INPUT') {
-        player.x = data.x ?? player.x;
-        player.y = data.y ?? player.y;
-        player.angle = data.angle ?? player.angle;
-        player.radius = data.radius ?? player.radius;
-        player.level = data.level ?? player.level;
-        player.score = data.score ?? player.score;
-        player.classId = data.classId ?? player.classId;
-        if (data.name) player.name = data.name;
-        if (data.color) player.color = data.color;
-      } else if (data.type === 'RESPAWN') {
-        player.hp = 100;
-        player.maxHp = 100;
-        player.x = data.x || (3000 + Math.random() * 1000);
-        player.y = data.y || (3000 + Math.random() * 1000);
-        player.score = 0;
-        player.level = 1;
-        player.classId = 'basic';
+
+      if (data.type === 'JOIN' || data.type === 'RESPAWN') {
+        let player = players.get(playerId);
+        if (!player) {
+          player = {
+            id: playerId,
+            name: data.name || 'Tank',
+            color: data.color || '#00b2e7',
+            x: data.x || (3000 + Math.random() * 1000),
+            y: data.y || (3000 + Math.random() * 1000),
+            radius: 26,
+            angle: 0,
+            score: 0,
+            level: 1,
+            hp: 100,
+            maxHp: 100,
+            classId: 'basic'
+          };
+          players.set(playerId, player);
+        } else {
+          player.hp = 100;
+          player.maxHp = 100;
+          player.x = data.x || (3000 + Math.random() * 1000);
+          player.y = data.y || (3000 + Math.random() * 1000);
+          player.score = 0;
+          player.level = 1;
+          player.classId = 'basic';
+          if (data.name) player.name = data.name;
+          if (data.color) player.color = data.color;
+        }
+      } else if (data.type === 'INPUT') {
+        let player = players.get(playerId);
+        if (!player && data.name) {
+          player = {
+            id: playerId,
+            name: data.name || 'Tank',
+            color: data.color || '#00b2e7',
+            x: data.x || 3500,
+            y: data.y || 3500,
+            radius: 26,
+            angle: 0,
+            score: 0,
+            level: 1,
+            hp: 100,
+            maxHp: 100,
+            classId: 'basic'
+          };
+          players.set(playerId, player);
+        }
+        if (player) {
+          player.x = data.x ?? player.x;
+          player.y = data.y ?? player.y;
+          player.angle = data.angle ?? player.angle;
+          player.radius = data.radius ?? player.radius;
+          player.level = data.level ?? player.level;
+          player.score = data.score ?? player.score;
+          player.classId = data.classId ?? player.classId;
+          if (data.name) player.name = data.name;
+          if (data.color) player.color = data.color;
+        }
       } else if (data.type === 'SHOOT') {
         const radius = data.radius || 8;
         bullets.push({
@@ -217,7 +241,6 @@ setInterval(() => {
             const nx = dx / dist;
             const ny = dy / dist;
 
-            // Push target player & deflect bullet
             targetP.x += nx * 2;
             targetP.y += ny * 2;
             b.vx -= nx * 2;
@@ -248,7 +271,6 @@ setInterval(() => {
           const nx = dx / dist;
           const ny = dy / dist;
 
-          // Push shape & deflect bullet velocity vector!
           s.x += nx * 1.5;
           s.y += ny * 1.5;
           b.vx -= nx * 2.0;
