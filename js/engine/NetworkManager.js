@@ -24,7 +24,6 @@ export class NetworkManager {
     if (host === 'localhost' || host === '127.0.0.1') {
       wsUrl = `${protocol}//${host}:8765`;
     } else {
-      // Cloud host (Render.com) uses same hostname and HTTPS port for WSS
       wsUrl = `${protocol}//${host}`;
     }
 
@@ -35,7 +34,7 @@ export class NetworkManager {
         this.connected = true;
         console.log('⚡ Connected to PolyTanks Server!');
         if (this.game.hudManager) {
-          this.game.hudManager.addKillFeedMessage('🟢 MULTIPLAYER LIVE! Press [N] to cycle classes.');
+          this.game.hudManager.addKillFeedMessage('🟢 MULTIPLAYER LIVE!');
         }
       };
 
@@ -55,6 +54,8 @@ export class NetworkManager {
 
       this.ws.onclose = () => {
         this.connected = false;
+        // Auto-reconnect WebSockets if connection drops
+        setTimeout(() => this.connect(), 1500);
       };
 
       this.ws.onerror = () => {
@@ -86,6 +87,7 @@ export class NetworkManager {
     const currentRemoteIds = new Set();
 
     playersData.forEach(pData => {
+      // 1. Local Player Health & Score Synchronization
       if (pData.id === this.playerId) {
         if (this.game.player && !this.game.player.godMode && this.game.player.classInfo.id !== 'arena_closer') {
           this.game.player.health = pData.hp;
@@ -98,6 +100,7 @@ export class NetworkManager {
 
       currentRemoteIds.add(pData.id);
 
+      // 2. Remote Players Synchronization
       let tank = this.remoteTanksMap.get(pData.id);
       if (!tank) {
         tank = new Tank(pData.x, pData.y, pData.name || 'Player', pData.color || '#f14e54', false);
@@ -115,6 +118,7 @@ export class NetworkManager {
         tank.level = pData.level || 1;
         tank.score = pData.score || 0;
         tank.health = pData.hp;
+
         if (pData.classId && tank.classInfo.id !== pData.classId) {
           tank.changeClass(pData.classId);
         }
@@ -122,12 +126,19 @@ export class NetworkManager {
           tank.radius = pData.radius;
         }
 
-        tank.pos.x += (pData.x - tank.pos.x) * 0.4;
-        tank.pos.y += (pData.y - tank.pos.y) * 0.4;
+        // Smooth position & angle lerping
+        tank.pos.x += (pData.x - tank.pos.x) * 0.45;
+        tank.pos.y += (pData.y - tank.pos.y) * 0.45;
         tank.angle = pData.angle || 0;
+
+        // Ensure tank is in this.game.tanks array even if tanks array was reset!
+        if (!this.game.tanks.includes(tank)) {
+          this.game.tanks.push(tank);
+        }
       }
     });
 
+    // Remove disconnected remote tanks
     this.remoteTanksMap.forEach((tank, id) => {
       if (!currentRemoteIds.has(id)) {
         const idx = this.game.tanks.indexOf(tank);

@@ -59,21 +59,29 @@ export class Game {
     this.tanks = [];
     this.survivalTime = 0;
 
-    const spawnX = 1000 + Math.random() * (this.arenaWidth - 2000);
-    const spawnY = 1000 + Math.random() * (this.arenaHeight - 2000);
+    // Spawn players closer to center (3000 to 4000) so connected players meet easily
+    const spawnX = 3000 + Math.random() * 1000;
+    const spawnY = 3000 + Math.random() * 1000;
     this.player = new Tank(spawnX, spawnY, playerName, playerColor, false);
     
     this.tanks.push(this.player);
 
-    if (!this.networkManager.connected) {
-      this.networkManager.connect();
-    } else {
-      this.networkManager.sendRespawn(spawnX, spawnY);
+    if (this.networkManager) {
+      // Re-add existing active remote tanks into the tanks array
+      this.networkManager.remoteTanksMap.forEach((remoteTank) => {
+        this.tanks.push(remoteTank);
+      });
+
+      if (!this.networkManager.connected) {
+        this.networkManager.connect();
+      } else {
+        this.networkManager.sendRespawn(spawnX, spawnY);
+      }
     }
 
     this.state = 'PLAYING';
     this.hudManager.showScreen('game');
-    this.hudManager.addKillFeedMessage(`Entered arena! Type ac() in console or press [P] for ARENA CLOSER 🟡.`);
+    this.hudManager.addKillFeedMessage(`Entered arena! Press [N] to cycle classes.`);
   }
 
   spawnAC() {
