@@ -1,6 +1,7 @@
 import { STAT_TYPES } from '../systems/UpgradeSystem.js';
 import { DevTokenSystem } from '../systems/DevTokenSystem.js';
 import { ShopSystem, SHOP_ITEMS } from '../systems/ShopSystem.js';
+import { TANK_CLASSES } from '../systems/ClassSystem.js';
 
 export class HUDManager {
   constructor(game) {
@@ -37,6 +38,7 @@ export class HUDManager {
     // Evolution Panel
     this.evolutionContainer = document.getElementById('evolutionContainer');
     this.evolutionOptions = document.getElementById('evolutionOptions');
+    this.lastEvoClassId = null;
 
     // Stat Upgrade Panel
     this.availablePoints = document.getElementById('availablePoints');
@@ -496,27 +498,41 @@ export class HUDManager {
 
     if (canEvolve) {
       this.evolutionContainer.classList.remove('hidden');
+
+      // Prevent 60 Hz DOM wiping! Only re-render when class or evolutions change!
+      if (this.lastEvoClassId === player.classInfo.id && this.evolutionOptions.children.length > 0) {
+        return;
+      }
+      this.lastEvoClassId = player.classInfo.id;
       this.evolutionOptions.innerHTML = '';
 
       availableEvolutions.forEach(classKey => {
         const evoCard = document.createElement('div');
         evoCard.className = 'evo-card';
 
-        const classData = this.game.classSystem ? this.game.classSystem.getClassData(classKey) : null;
+        const classData = TANK_CLASSES[classKey];
         const className = classData ? classData.name : classKey.toUpperCase();
 
         evoCard.innerHTML = `<div class="evo-card-title">${className}</div>`;
 
-        evoCard.addEventListener('click', () => {
+        evoCard.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
           player.changeClass(classKey);
           this.addKillFeedMessage(`Evolved into ${className}!`);
+          this.lastEvoClassId = null;
           this.updateEvolutionPanel(player);
+
+          if (this.game.networkManager && this.game.networkManager.connected) {
+            this.game.networkManager.sendInput(player);
+          }
         });
 
         this.evolutionOptions.appendChild(evoCard);
       });
     } else {
       this.evolutionContainer.classList.add('hidden');
+      this.lastEvoClassId = null;
     }
   }
 
