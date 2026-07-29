@@ -1,6 +1,6 @@
 import { STAT_TYPES } from '../systems/UpgradeSystem.js';
 import { TANK_CLASSES } from '../systems/ClassSystem.js';
-import { ShopSystem, SHOP_ITEMS } from '../systems/ShopSystem.js';
+import { ShopSystem, SHOP_ITEMS, CHALLENGES } from '../systems/ShopSystem.js';
 import { DevTokenSystem } from '../systems/DevTokenSystem.js';
 
 export class HUDManager {
@@ -54,6 +54,8 @@ export class HUDManager {
     this.devClassBtn = document.getElementById('devClassBtn');
     this.devGodBtn = document.getElementById('devGodBtn');
 
+    this.activeShopTab = 'Shop';
+
     this.initEventListeners();
     this.renderStatTree();
     this.checkDevAuth();
@@ -72,10 +74,12 @@ export class HUDManager {
       const name = this.playerNameInput.value.trim() || 'Tank';
       const skinColor = this.shopSystem.EquippedSkin.colors ? this.shopSystem.EquippedSkin.colors[0] : '#00b2e7';
       this.game.startGame(name, skinColor);
+      this.applyEquippedCosmeticsToPlayer();
     });
 
     // Shop Modal
     this.inventoryBtn.addEventListener('click', () => {
+      this.activeShopTab = 'Shop';
       this.renderShopMarketplace();
       this.inventoryModal.classList.remove('hidden');
       this.inventoryModal.classList.add('active');
@@ -84,6 +88,21 @@ export class HUDManager {
     this.closeInventoryBtn.addEventListener('click', () => {
       this.inventoryModal.classList.remove('active');
       this.inventoryModal.classList.add('hidden');
+    });
+
+    // Tab buttons in Shop
+    const tabBtns = document.querySelectorAll('.florr-tab-btn');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeShopTab = btn.innerText.trim();
+        if (this.activeShopTab === 'Challenge') {
+          this.renderChallengesTab();
+        } else {
+          this.renderShopMarketplace();
+        }
+      });
     });
 
     // Dev Token Modal
@@ -113,6 +132,7 @@ export class HUDManager {
       const name = this.playerNameInput.value.trim() || 'Tank';
       const skinColor = this.shopSystem.EquippedSkin.colors ? this.shopSystem.EquippedSkin.colors[0] : '#00b2e7';
       this.game.startGame(name, skinColor);
+      this.applyEquippedCosmeticsToPlayer();
     });
 
     // Dev Toolbar Listeners
@@ -120,6 +140,7 @@ export class HUDManager {
       this.devClassBtn.addEventListener('click', () => {
         if (this.game.inputManager) {
           this.game.inputManager.cycleNextClass();
+          this.checkChallengeProgress();
         }
       });
     }
@@ -128,6 +149,7 @@ export class HUDManager {
       this.devXpBtn.addEventListener('click', () => {
         if (this.game.player) {
           this.game.player.addXP(5000);
+          this.checkChallengeProgress();
           this.addKillFeedMessage(`DEV: +5,000 XP Added! (Lv ${this.game.player.level})`);
         }
       });
@@ -137,6 +159,7 @@ export class HUDManager {
       this.devMaxBtn.addEventListener('click', () => {
         if (this.game.player) {
           this.game.player.addXP(30000);
+          this.checkChallengeProgress();
           this.addKillFeedMessage(`DEV: Level 45 Reached!`);
         }
       });
@@ -152,13 +175,32 @@ export class HUDManager {
     }
   }
 
+  applyEquippedCosmeticsToPlayer() {
+    if (!this.game.player) return;
+    this.game.player.equippedSkin = this.shopSystem.EquippedSkin;
+    this.game.player.equippedEffect = this.shopSystem.EquippedEffect;
+    this.game.player.equippedPet = this.shopSystem.EquippedPet;
+
+    if (this.shopSystem.EquippedSkin.colors) {
+      this.game.player.color = this.shopSystem.EquippedSkin.colors[0];
+    }
+  }
+
+  checkChallengeProgress() {
+    if (!this.game.player) return;
+
+    this.shopSystem.progress.maxLevel = Math.max(this.shopSystem.progress.maxLevel, this.game.player.level);
+    if (this.game.player.classInfo.id === 'arena_closer') {
+      this.shopSystem.progress.acUnlocked = 1;
+    }
+    this.shopSystem.saveState();
+  }
+
   renderShopMarketplace() {
     this.starBalanceEl.innerText = this.shopSystem.stars.toLocaleString();
     this.shopGridEl.innerHTML = '';
 
-    const colorsList = ['#d32f2f', '#d32f2f', '#00acc1', '#8e24aa', '#0097a7', '#e91e63', '#e91e63', '#d81b60', '#0097a7', '#00838f'];
-
-    SHOP_ITEMS.forEach((item, idx) => {
+    SHOP_ITEMS.forEach((item) => {
       const isUnlocked = this.shopSystem.unlockedItems.has(item.id);
       const isEquipped = (this.shopSystem.equippedSkinId === item.id) ||
                          (this.shopSystem.equippedEffectId === item.id) ||
@@ -178,12 +220,13 @@ export class HUDManager {
         btnClass += ' owned-btn';
       }
 
-      const cardColor = colorsList[idx % colorsList.length];
+      // Unique Canvas Preview for every item!
+      const canvasId = `preview_canvas_${item.id}`;
 
       card.innerHTML = `
         ${item.discount ? `<div class="florr-discount-tag">${item.discount}</div>` : ''}
-        <div class="florr-icon-box" style="background: ${cardColor};">
-          <span class="florr-icon-emoji">${item.icon}</span>
+        <div class="florr-icon-box">
+          <canvas id="${canvasId}" width="80" height="80"></canvas>
         </div>
         <div class="florr-item-name">${item.name}</div>
         <button class="${btnClass}">${priceLabel}</button>
@@ -192,14 +235,114 @@ export class HUDManager {
       card.addEventListener('click', () => {
         if (!isUnlocked) {
           if (this.shopSystem.buyItem(item.id)) {
-            this.addKillFeedMessage(`✨ Purchased ${item.name}!`);
+            this.addKillFeedMessage(`✨ Unlocked ${item.name}!`);
+            this.applyEquippedCosmeticsToPlayer();
             this.renderShopMarketplace();
           } else {
             alert('Not enough Stars! Complete challenges to earn stars.');
           }
         } else {
           this.shopSystem.equipItem(item.id);
+          this.applyEquippedCosmeticsToPlayer();
           this.renderShopMarketplace();
+        }
+      });
+
+      this.shopGridEl.appendChild(card);
+
+      // Render Tank Preview on Card Canvas
+      setTimeout(() => this.drawTankPreviewOnCanvas(canvasId, item), 0);
+    });
+  }
+
+  drawTankPreviewOnCanvas(canvasId, item) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 80, 80);
+
+    const cx = 40, cy = 40, r = 18;
+
+    // Draw Aura Preview
+    if (item.category === 'effect' || item.type === 'aura') {
+      ctx.strokeStyle = item.color || '#00e676';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Draw Cannon Barrel
+    ctx.fillStyle = '#999999';
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 2;
+    ctx.fillRect(cx, cy - 6, 26, 12);
+    ctx.strokeRect(cx, cy - 6, 26, 12);
+
+    // Draw Tank Body with Cosmetic Gradient
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+
+    if (item.category === 'skin' && item.colors) {
+      const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+      grad.addColorStop(0, item.colors[0]);
+      grad.addColorStop(1, item.colors[1]);
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = '#00b2e7';
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw Companion Pet Preview
+    if (item.category === 'pet') {
+      ctx.fillStyle = item.color || '#ffe869';
+      ctx.beginPath();
+      ctx.arc(cx + 24, cy - 14, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  renderChallengesTab() {
+    this.starBalanceEl.innerText = this.shopSystem.stars.toLocaleString();
+    this.shopGridEl.innerHTML = '';
+
+    CHALLENGES.forEach((chal) => {
+      const isClaimed = this.shopSystem.claimedChallenges.has(chal.id);
+      const currentVal = this.shopSystem.progress[chal.key] || 0;
+      const isComplete = currentVal >= chal.target;
+
+      const card = document.createElement('div');
+      card.className = `florr-item-card ${isClaimed ? 'equipped' : ''}`;
+      card.style.gridColumn = 'span 2';
+
+      let btnLabel = `CLAIM +${chal.reward} ⭐`;
+      let btnClass = 'florr-price-btn owned-btn';
+
+      if (isClaimed) {
+        btnLabel = 'COMPLETED ✓';
+        btnClass = 'florr-price-btn equipped-btn';
+      } else if (!isComplete) {
+        btnLabel = `${currentVal}/${chal.target}`;
+        btnClass = 'florr-price-btn';
+      }
+
+      card.innerHTML = `
+        <div class="florr-icon-box" style="background: #4a148c;">
+          <span class="florr-icon-emoji">🎯</span>
+        </div>
+        <div class="florr-item-name">${chal.title}</div>
+        <div style="font-size: 0.65rem; color: #fff; text-align: center;">${chal.desc}</div>
+        <button class="${btnClass}">${btnLabel}</button>
+      `;
+
+      card.addEventListener('click', () => {
+        if (!isClaimed && isComplete) {
+          if (this.shopSystem.claimChallenge(chal.id)) {
+            this.addKillFeedMessage(`🏆 Challenge Complete! +${chal.reward} Stars!`);
+            this.renderChallengesTab();
+          }
         }
       });
 
@@ -266,6 +409,8 @@ export class HUDManager {
 
   update(player, tanks) {
     if (!player) return;
+
+    this.checkChallengeProgress();
 
     this.hudPlayerName.innerText = player.name;
     this.hudClassName.innerText = player.classInfo.name;

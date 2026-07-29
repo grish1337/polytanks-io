@@ -1,12 +1,12 @@
 export const SHOP_ITEMS = [
-  // Today's Offers (Matching Florr.io shop card layout from reference screenshot!)
+  // 🎨 Cosmetic Gradients & Skins
   {
     id: 'grad_neon',
     name: 'Neon Cyber',
     category: 'skin',
     type: 'gradient',
     colors: ['#00b2e7', '#8a2be2'],
-    price: 60,
+    price: 50,
     icon: '🔮',
     description: 'Electric cyan to violet neon gradient skin.'
   },
@@ -16,7 +16,7 @@ export const SHOP_ITEMS = [
     category: 'effect',
     type: 'aura',
     color: '#00e676',
-    price: 40,
+    price: 80,
     icon: '♠️',
     description: 'Glowing emerald plasma energy aura surrounding your tank.'
   },
@@ -26,7 +26,7 @@ export const SHOP_ITEMS = [
     category: 'skin',
     type: 'gradient',
     colors: ['#ffe869', '#f14e54'],
-    price: 400,
+    price: 300,
     icon: '📐',
     description: 'Blazing golden sun to crimson flame gradient skin.'
   },
@@ -36,10 +36,10 @@ export const SHOP_ITEMS = [
     category: 'effect',
     type: 'halo',
     color: '#bf55ec',
-    price: 1200,
+    price: 600,
     discount: '-20%',
     icon: '🪃',
-    description: 'Pulsing purple starfire halo floating over your cannon.'
+    description: 'Pulsing purple starfire halo floating over your tank.'
   },
   {
     id: 'pet_droid',
@@ -47,20 +47,20 @@ export const SHOP_ITEMS = [
     category: 'pet',
     type: 'pet_drone',
     color: '#00b2e7',
-    price: 640,
+    price: 800,
     discount: '-20%',
     icon: '📡',
     description: 'Cute mini cyber droid that orbits your tank in battle.'
   },
 
-  // Premium Row
+  // Premium / Mythic Row (Fair balanced prices!)
   {
     id: 'grad_void',
     name: 'Void Eclipse',
     category: 'skin',
     type: 'gradient',
     colors: ['#bf55ec', '#111122'],
-    price: 36000,
+    price: 1500,
     icon: '🍃',
     description: 'Deep abyss purple to cosmic dark gradient.'
   },
@@ -70,7 +70,7 @@ export const SHOP_ITEMS = [
     category: 'effect',
     type: 'trail',
     color: '#ffe869',
-    price: 48000,
+    price: 2500,
     icon: '🌸',
     description: 'Leaves a sparkling trail of floating stardust as you move.'
   },
@@ -80,7 +80,7 @@ export const SHOP_ITEMS = [
     category: 'pet',
     type: 'pet_star',
     color: '#ffe869',
-    price: 12000,
+    price: 3500,
     icon: '🥦',
     description: 'Glowing yellow star pet companion.'
   },
@@ -90,19 +90,54 @@ export const SHOP_ITEMS = [
     category: 'skin',
     type: 'gradient',
     colors: ['#00e676', '#00b2e7'],
-    price: 600000,
+    price: 10000,
     icon: '🍊',
     description: 'Majestic northern lights glowing gradient.'
   },
   {
     id: 'pet_stinger',
-    name: 'Stinger Drone',
+    name: 'Stinger Guardian',
     category: 'pet',
     type: 'pet_stinger',
     color: '#111111',
-    price: 2400000,
+    price: 25000,
     icon: '✴️',
     description: 'Stealth black stinger drone guardian pet.'
+  }
+];
+
+export const CHALLENGES = [
+  {
+    id: 'chal_shapes_15',
+    title: 'Shape Destroyer',
+    desc: 'Destroy 15 Shapes in the arena',
+    reward: 250,
+    target: 15,
+    key: 'shapeKills'
+  },
+  {
+    id: 'chal_pvp_2',
+    title: 'PVP Gladiator',
+    desc: 'Defeat 2 Enemy Tanks in battle',
+    reward: 500,
+    target: 2,
+    key: 'playerKills'
+  },
+  {
+    id: 'chal_lvl_30',
+    title: 'Level Master',
+    desc: 'Reach Level 30 with your tank',
+    reward: 1000,
+    target: 30,
+    key: 'maxLevel'
+  },
+  {
+    id: 'chal_ac_unlock',
+    title: 'Arena Overlord',
+    desc: 'Cycle into the Arena Closer 🟡',
+    reward: 2500,
+    target: 1,
+    key: 'acUnlocked'
   }
 ];
 
@@ -113,6 +148,15 @@ export class ShopSystem {
     this.equippedSkinId = 'grad_neon';
     this.equippedEffectId = 'effect_plasma';
     this.equippedPetId = null;
+
+    // Challenge Progress
+    this.progress = {
+      shapeKills: 0,
+      playerKills: 0,
+      maxLevel: 1,
+      acUnlocked: 0
+    };
+    this.claimedChallenges = new Set();
 
     this.loadState();
   }
@@ -136,6 +180,15 @@ export class ShopSystem {
 
       const savedPet = localStorage.getItem('polytanks_equipped_pet');
       if (savedPet) this.equippedPetId = savedPet;
+
+      const savedProgress = localStorage.getItem('polytanks_progress');
+      if (savedProgress) this.progress = JSON.parse(savedProgress);
+
+      const savedClaimed = localStorage.getItem('polytanks_claimed_challenges');
+      if (savedClaimed) {
+        const arr = JSON.parse(savedClaimed);
+        arr.forEach(id => this.claimedChallenges.add(id));
+      }
     } catch (e) {}
   }
 
@@ -146,6 +199,8 @@ export class ShopSystem {
       localStorage.setItem('polytanks_equipped_skin', this.equippedSkinId || '');
       localStorage.setItem('polytanks_equipped_effect', this.equippedEffectId || '');
       localStorage.setItem('polytanks_equipped_pet', this.equippedPetId || '');
+      localStorage.setItem('polytanks_progress', JSON.stringify(this.progress));
+      localStorage.setItem('polytanks_claimed_challenges', JSON.stringify(Array.from(this.claimedChallenges)));
     } catch (e) {}
   }
 
@@ -177,6 +232,20 @@ export class ShopSystem {
     }
     this.saveState();
     return true;
+  }
+
+  claimChallenge(challengeId) {
+    const chal = CHALLENGES.find(c => c.id === challengeId);
+    if (!chal || this.claimedChallenges.has(challengeId)) return false;
+
+    const currentVal = this.progress[chal.key] || 0;
+    if (currentVal >= chal.target) {
+      this.stars += chal.reward;
+      this.claimedChallenges.add(challengeId);
+      this.saveState();
+      return true;
+    }
+    return false;
   }
 
   get EquippedSkin() {

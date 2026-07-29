@@ -117,7 +117,7 @@ wss.on('connection', (ws) => {
           color: data.color || '#00b2e7',
           ownerId: playerId,
           life: 80,
-          hp: radius * 3.5 // Bullet Health Pool (pierces multiple shapes!)
+          hp: radius * 3.5
         });
       }
     } catch (e) {}
@@ -156,7 +156,6 @@ setInterval(() => {
         const ny = dy / dist;
         const overlap = minDist - dist;
 
-        // Soft pleasant cushion displacement (sepFactor = 0.65)
         s.x += nx * overlap * 0.35;
         s.y += ny * overlap * 0.35;
         p.x -= nx * overlap * 0.35;
@@ -175,7 +174,32 @@ setInterval(() => {
     });
   });
 
-  // 2. Bullets & Bullet HP Penetration Mechanics
+  // 2. Diep.io Bullet vs Bullet Deflection Momentum
+  for (let i = 0; i < bullets.length; i++) {
+    for (let j = i + 1; j < bullets.length; j++) {
+      const b1 = bullets[i];
+      const b2 = bullets[j];
+      if (b1.ownerId !== b2.ownerId) {
+        const dx = b2.x - b1.x;
+        const dy = b2.y - b1.y;
+        const distSq = dx * dx + dy * dy;
+        const minDist = b1.radius + b2.radius;
+        if (distSq < minDist * minDist) {
+          const dist = Math.sqrt(distSq) || 1;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          b1.vx -= nx * 2.5;
+          b1.vy -= ny * 2.5;
+          b2.vx += nx * 2.5;
+          b2.vy += ny * 2.5;
+          b1.hp -= 15;
+          b2.hp -= 15;
+        }
+      }
+    }
+  }
+
+  // 3. Bullets & Bullet HP Penetration & Knockback Deflection Mechanics
   const newBullets = [];
   bullets.forEach((b) => {
     b.x += b.vx;
@@ -183,15 +207,26 @@ setInterval(() => {
     b.life -= 1;
 
     if (b.life > 0 && b.hp > 0 && b.x >= 0 && b.x <= ARENA_WIDTH && b.y >= 0 && b.y <= ARENA_HEIGHT) {
-      // PVP Player Bullet Damage
+      // PVP Player Bullet Damage & Deflection
       players.forEach((targetP, targetId) => {
         if (targetId !== b.ownerId && targetP.classId !== 'arena_closer') {
           const dx = targetP.x - b.x;
           const dy = targetP.y - b.y;
           if (dx * dx + dy * dy < (targetP.radius + b.radius) ** 2) {
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // Push target player & deflect bullet
+            targetP.x += nx * 2;
+            targetP.y += ny * 2;
+            b.vx -= nx * 2;
+            b.vy -= ny * 2;
+
             const dmg = b.radius > 20 ? 18 : 10;
             targetP.hp = Math.max(0, targetP.hp - dmg);
-            b.hp -= 20; // Subtract HP from bullet upon hitting player
+            b.hp -= 20;
+
             if (targetP.hp <= 0) {
               const shooter = players.get(b.ownerId);
               if (shooter) shooter.score += Math.floor(targetP.score * 0.5) + 500;
@@ -200,7 +235,7 @@ setInterval(() => {
         }
       });
 
-      // Shape Bullet Damage & Piercing
+      // Shape Bullet Damage, Piercing & Momentum Deflection
       const shooter = players.get(b.ownerId);
       const isAc = shooter && shooter.classId === 'arena_closer';
       const dmg = isAc ? 500 : (b.radius > 18 ? 30 : 18);
@@ -209,9 +244,17 @@ setInterval(() => {
         const dx = s.x - b.x;
         const dy = s.y - b.y;
         if (dx * dx + dy * dy < (s.radius + b.radius) ** 2) {
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Push shape & deflect bullet velocity vector!
+          s.x += nx * 1.5;
+          s.y += ny * 1.5;
+          b.vx -= nx * 2.0;
+          b.vy -= ny * 2.0;
+
           s.hp -= dmg;
-          
-          // Bullet loses HP based on shape density, but only dies if b.hp <= 0!
           const targetDensity = s.type === 'alpha_pentagon' ? 40 : (s.type === 'pentagon' ? 20 : (s.type === 'triangle' ? 12 : 8));
           b.hp -= targetDensity;
 
@@ -224,7 +267,6 @@ setInterval(() => {
         }
       });
 
-      // Keep bullet active if it still has health and lifespan left!
       if (b.hp > 0 && b.life > 0) {
         newBullets.push(b);
       }

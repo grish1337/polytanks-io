@@ -49,7 +49,7 @@ export class CollisionEngine {
     const m1Ratio = e2.mass / totalMass;
     const m2Ratio = e1.mass / totalMass;
 
-    const sepFactor = 0.65; // Soft pleasant cushion separation
+    const sepFactor = 0.65;
     e1.pos.x -= nx * overlap * m1Ratio * sepFactor;
     e1.pos.y -= ny * overlap * m1Ratio * sepFactor;
     e2.pos.x += nx * overlap * m2Ratio * sepFactor;
@@ -85,7 +85,7 @@ export class CollisionEngine {
     e2.takeDamage(dmg1, e1);
   }
 
-  // Bullet Health & Penetration Collision
+  // Diep.io Projectile & Bullet Momentum Deflection Mechanics
   resolveBulletImpact(bullet, target, game) {
     if (bullet.dead || target.dead || bullet.owner === target) return;
 
@@ -99,15 +99,20 @@ export class CollisionEngine {
       const nx = dx / dist;
       const ny = dy / dist;
 
-      const knockbackForce = bullet.speed * bullet.penetration * 0.03;
+      // Diep.io Bullet Momentum Pushback & Deflection
+      const knockbackForce = bullet.speed * bullet.penetration * 0.04;
       target.vel.x += nx * (knockbackForce / target.mass);
       target.vel.y += ny * (knockbackForce / target.mass);
+
+      // Deflect the bullet backwards/sideways upon impact!
+      bullet.vel.x -= nx * 2.5;
+      bullet.vel.y -= ny * 2.5;
 
       const damageToTarget = bullet.damage;
       const damageToBullet = target.bodyDamage || 10;
 
       target.takeDamage(damageToTarget, bullet.owner);
-      bullet.health -= damageToBullet; // Subtract target density from bullet HP
+      bullet.health -= damageToBullet;
 
       if (game && game.particleManager) {
         game.particleManager.spawnSparks(bullet.pos.x, bullet.pos.y, nx, ny, bullet.color, 4);
@@ -117,10 +122,37 @@ export class CollisionEngine {
         game.soundEngine.playHitSound(target.type === 'shape');
       }
 
-      // Bullet dies only when health drops to 0 or below
       if (bullet.health <= 0) {
         bullet.dead = true;
       }
+    }
+  }
+
+  // Bullet vs Bullet Deflection
+  resolveBulletVsBullet(b1, b2) {
+    if (b1.dead || b2.dead || b1.owner === b2.owner) return;
+
+    const dx = b2.pos.x - b1.pos.x;
+    const dy = b2.pos.y - b1.pos.y;
+    const distSq = dx * dx + dy * dy;
+    const minDist = b1.radius + b2.radius;
+
+    if (distSq < minDist * minDist) {
+      const dist = Math.sqrt(distSq) || 1;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // Deflect both bullets in opposite directions
+      b1.vel.x -= nx * 3.0;
+      b1.vel.y -= ny * 3.0;
+      b2.vel.x += nx * 3.0;
+      b2.vel.y += ny * 3.0;
+
+      b1.health -= 15;
+      b2.health -= 15;
+
+      if (b1.health <= 0) b1.dead = true;
+      if (b2.health <= 0) b2.dead = true;
     }
   }
 }
