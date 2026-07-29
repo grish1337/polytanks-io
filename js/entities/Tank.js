@@ -81,9 +81,9 @@ export class Tank extends Entity {
   update(dt = 1, game = null) {
     super.update(dt);
 
-    // Buttery Smooth Physics Damping & Gliding Inertia!
-    this.vel.x *= Math.pow(0.92, dt);
-    this.vel.y *= Math.pow(0.92, dt);
+    // Balanced Diep.io Smooth Physics Friction
+    this.vel.x *= Math.pow(0.90, dt);
+    this.vel.y *= Math.pow(0.90, dt);
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
 
@@ -111,14 +111,14 @@ export class Tank extends Entity {
     const baseReload = (this.classInfo.id === 'arena_closer') ? 3 : 15;
     const reloadTicks = Math.max(2, baseReload / reloadStat);
 
-    const barrels = this.classInfo.barrels || [{ angleOffset: 0, length: 35, width: 18, recoil: 4 }];
+    const barrels = this.classInfo.barrels || [{ angleOffset: 0, height: 42, width: 24, recoil: 4 }];
 
     barrels.forEach((b, idx) => {
       if (this.reloadTimers[idx] <= 0) {
         this.reloadTimers[idx] = reloadTicks;
 
         const finalAngle = this.angle + (b.angleOffset || 0);
-        const barrelLen = (b.length || 35) * (this.radius / 26);
+        const barrelLen = (b.height || b.length || 35) * (this.radius / 26);
         const muzzleX = this.pos.x + Math.cos(finalAngle) * barrelLen;
         const muzzleY = this.pos.y + Math.sin(finalAngle) * barrelLen;
 
@@ -185,19 +185,26 @@ export class Tank extends Entity {
       } catch (e) {}
     }
 
-    // 2. Draw Barrels / Cannons
+    // 2. Draw Barrels / Cannons with precise angleOffset & length!
     ctx.save();
     ctx.rotate(this.angle || 0);
     ctx.fillStyle = '#999999';
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = Math.max(2, renderRadius * 0.15);
 
-    const barrels = this.classInfo.barrels || [{ angleOffset: 0, length: 35, width: 18 }];
+    const barrels = this.classInfo.barrels || [{ angleOffset: 0, height: 42, width: 24, offsetY: 0 }];
     barrels.forEach(b => {
-      const bLen = (b.length || 35) * camera.zoom * (this.radius / 26);
+      ctx.save();
+      const angleOffset = b.angleOffset || 0;
+      ctx.rotate(angleOffset);
+
+      const bLen = (b.height || b.length || 35) * camera.zoom * (this.radius / 26);
       const bW = (b.width || 18) * camera.zoom * (this.radius / 26);
-      ctx.fillRect(0, -bW / 2, bLen, bW);
-      ctx.strokeRect(0, -bW / 2, bLen, bW);
+      const offY = (b.offsetY || 0) * camera.zoom * (this.radius / 26);
+
+      ctx.fillRect(0, -bW / 2 + offY, bLen, bW);
+      ctx.strokeRect(0, -bW / 2 + offY, bLen, bW);
+      ctx.restore();
     });
     ctx.restore();
 

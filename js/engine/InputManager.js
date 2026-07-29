@@ -143,13 +143,13 @@ export class InputManager {
       ? player.upgradeSystem.getMultiplier('movementSpeed')
       : 1.0;
 
-    let moveSpeedMultiplier = 2.4 * speedStat;
+    let moveSpeedMultiplier = 1.0 * speedStat;
     if (player.classInfo && player.classInfo.id === 'arena_closer') {
       moveSpeedMultiplier *= 2.5;
     }
 
-    // Buttery smooth physics acceleration & inertia!
-    const accel = 0.85 * moveSpeedMultiplier;
+    // Classic Diep.io smooth movement speed & acceleration!
+    const accel = 0.28 * moveSpeedMultiplier;
     player.vel.x += moveX * accel;
     player.vel.y += moveY * accel;
 
