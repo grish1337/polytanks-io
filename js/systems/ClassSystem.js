@@ -4,6 +4,7 @@ export const TANK_CLASSES = {
     name: 'Basic Tank',
     tier: 1,
     requiredLevel: 1,
+    nextTierRequiredLevel: 15,
     barrels: [
       { height: 42, width: 24, offsetY: 0, angleOffset: 0, recoil: 2.5, reloadMult: 1.0, damageMult: 1.0, speedMult: 1.0, sizeMult: 1.0 }
     ],
@@ -18,6 +19,7 @@ export const TANK_CLASSES = {
     name: 'Arena Closer',
     tier: 4,
     requiredLevel: 1,
+    nextTierRequiredLevel: 999,
     isDevOnly: true,
     color: '#ffe869',
     barrels: [
@@ -35,6 +37,7 @@ export const TANK_CLASSES = {
     name: 'Twin',
     tier: 2,
     requiredLevel: 15,
+    nextTierRequiredLevel: 30,
     barrels: [
       { height: 42, width: 22, offsetY: -12, angleOffset: 0, recoil: 2.0, reloadMult: 1.15, damageMult: 0.85, speedMult: 1.0, sizeMult: 0.95 },
       { height: 42, width: 22, offsetY: 12, angleOffset: 0, recoil: 2.0, reloadMult: 1.15, damageMult: 0.85, speedMult: 1.0, sizeMult: 0.95 }
@@ -49,6 +52,7 @@ export const TANK_CLASSES = {
     name: 'Sniper',
     tier: 2,
     requiredLevel: 15,
+    nextTierRequiredLevel: 30,
     barrels: [
       { height: 56, width: 22, offsetY: 0, angleOffset: 0, recoil: 4.0, reloadMult: 0.65, damageMult: 1.7, speedMult: 1.5, sizeMult: 1.1 }
     ],
@@ -62,6 +66,7 @@ export const TANK_CLASSES = {
     name: 'Machine Gun',
     tier: 2,
     requiredLevel: 15,
+    nextTierRequiredLevel: 30,
     barrels: [
       { height: 40, width: 30, offsetY: 0, angleOffset: 0, recoil: 1.8, reloadMult: 2.2, damageMult: 0.65, speedMult: 1.1, spread: 0.35, sizeMult: 0.85 }
     ],
@@ -75,6 +80,7 @@ export const TANK_CLASSES = {
     name: 'Flank Guard',
     tier: 2,
     requiredLevel: 15,
+    nextTierRequiredLevel: 30,
     barrels: [
       { height: 42, width: 24, offsetY: 0, angleOffset: 0, recoil: 2.5, reloadMult: 1.0, damageMult: 1.0, speedMult: 1.0, sizeMult: 1.0 },
       { height: 32, width: 24, offsetY: 0, angleOffset: Math.PI, recoil: 2.0, reloadMult: 1.0, damageMult: 0.85, speedMult: 1.0, sizeMult: 0.9 }
@@ -90,6 +96,7 @@ export const TANK_CLASSES = {
     name: 'Triple Shot',
     tier: 3,
     requiredLevel: 30,
+    nextTierRequiredLevel: 45,
     barrels: [
       { height: 42, width: 22, offsetY: 0, angleOffset: 0, recoil: 2.0, reloadMult: 1.1, damageMult: 0.85, speedMult: 1.0 },
       { height: 38, width: 20, offsetY: 0, angleOffset: -0.4, recoil: 1.8, reloadMult: 1.1, damageMult: 0.8, speedMult: 1.0 },
@@ -105,6 +112,7 @@ export const TANK_CLASSES = {
     name: 'Quad Tank',
     tier: 3,
     requiredLevel: 30,
+    nextTierRequiredLevel: 45,
     barrels: [
       { height: 42, width: 22, offsetY: 0, angleOffset: 0, recoil: 2.0, reloadMult: 1.0, damageMult: 0.85 },
       { height: 42, width: 22, offsetY: 0, angleOffset: Math.PI / 2, recoil: 2.0, reloadMult: 1.0, damageMult: 0.85 },
@@ -121,6 +129,7 @@ export const TANK_CLASSES = {
     name: 'Assassin',
     tier: 3,
     requiredLevel: 30,
+    nextTierRequiredLevel: 45,
     barrels: [
       { height: 68, width: 22, offsetY: 0, angleOffset: 0, recoil: 5.0, reloadMult: 0.5, damageMult: 2.4, speedMult: 1.8, sizeMult: 1.2 }
     ],
@@ -134,6 +143,7 @@ export const TANK_CLASSES = {
     name: 'Destroyer',
     tier: 3,
     requiredLevel: 30,
+    nextTierRequiredLevel: 45,
     barrels: [
       { height: 44, width: 44, offsetY: 0, angleOffset: 0, recoil: 12.0, reloadMult: 0.35, damageMult: 4.5, speedMult: 0.8, sizeMult: 2.2 }
     ],
@@ -147,6 +157,7 @@ export const TANK_CLASSES = {
     name: 'Tri-Angle',
     tier: 3,
     requiredLevel: 30,
+    nextTierRequiredLevel: 45,
     barrels: [
       { height: 42, width: 24, offsetY: 0, angleOffset: 0, recoil: 2.5, reloadMult: 1.0, damageMult: 1.0, speedMult: 1.0 },
       { height: 34, width: 20, offsetY: 0, angleOffset: 2.5, recoil: 4.5, reloadMult: 1.2, damageMult: 0.6, speedMult: 1.1 },
@@ -163,6 +174,7 @@ export const TANK_CLASSES = {
     name: 'Penta Shot',
     tier: 4,
     requiredLevel: 45,
+    nextTierRequiredLevel: 999,
     barrels: [
       { height: 44, width: 22, offsetY: 0, angleOffset: 0, recoil: 2.2, reloadMult: 1.2, damageMult: 0.9, speedMult: 1.1 },
       { height: 40, width: 20, offsetY: 0, angleOffset: -0.3, recoil: 2.0, reloadMult: 1.2, damageMult: 0.85, speedMult: 1.05 },
@@ -179,6 +191,7 @@ export const TANK_CLASSES = {
     name: 'Octo Tank',
     tier: 4,
     requiredLevel: 45,
+    nextTierRequiredLevel: 999,
     barrels: [
       { height: 42, width: 22, offsetY: 0, angleOffset: 0, recoil: 1.5, reloadMult: 1.1, damageMult: 0.85 },
       { height: 42, width: 22, offsetY: 0, angleOffset: Math.PI / 4, recoil: 1.5, reloadMult: 1.1, damageMult: 0.85 },
@@ -198,6 +211,7 @@ export const TANK_CLASSES = {
     name: 'Ranger',
     tier: 4,
     requiredLevel: 45,
+    nextTierRequiredLevel: 999,
     barrels: [
       { height: 76, width: 24, offsetY: 0, angleOffset: 0, recoil: 6.0, reloadMult: 0.45, damageMult: 3.2, speedMult: 2.2, sizeMult: 1.3 }
     ],
@@ -210,6 +224,7 @@ export const TANK_CLASSES = {
     name: 'Annihilator',
     tier: 4,
     requiredLevel: 45,
+    nextTierRequiredLevel: 999,
     barrels: [
       { height: 48, width: 56, offsetY: 0, angleOffset: 0, recoil: 18.0, reloadMult: 0.3, damageMult: 7.0, speedMult: 0.85, sizeMult: 2.8 }
     ],
@@ -222,6 +237,7 @@ export const TANK_CLASSES = {
     name: 'Booster',
     tier: 4,
     requiredLevel: 45,
+    nextTierRequiredLevel: 999,
     barrels: [
       { height: 42, width: 24, offsetY: 0, angleOffset: 0, recoil: 2.5, reloadMult: 1.0, damageMult: 1.0, speedMult: 1.0 },
       { height: 34, width: 18, offsetY: 0, angleOffset: 2.35, recoil: 5.5, reloadMult: 1.3, damageMult: 0.5, speedMult: 1.1 },

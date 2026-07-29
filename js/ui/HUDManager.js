@@ -494,12 +494,12 @@ export class HUDManager {
     if (!player) return;
 
     const availableEvolutions = player.classInfo.evolvesTo || [];
-    const canEvolve = (player.level >= player.classInfo.requiredLevel) && availableEvolutions.length > 0;
+    const reqLevel = player.classInfo.nextTierRequiredLevel || (player.classInfo.tier === 1 ? 15 : (player.classInfo.tier === 2 ? 30 : 45));
+    const canEvolve = (player.level >= reqLevel) && availableEvolutions.length > 0;
 
     if (canEvolve) {
       this.evolutionContainer.classList.remove('hidden');
 
-      // Prevent 60 Hz DOM wiping! Only re-render when class or evolutions change!
       if (this.lastEvoClassId === player.classInfo.id && this.evolutionOptions.children.length > 0) {
         return;
       }
