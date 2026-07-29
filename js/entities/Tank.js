@@ -143,7 +143,8 @@ export class Tank extends Entity {
           game.bullets.push(bullet);
         }
 
-        const recoilMag = (b.recoil || 4) * (isAc ? 8 : 1);
+        // Cannon recoil push (Scaled down for small, soft & pleasant firing!)
+        const recoilMag = (b.recoil || 2) * 0.25 * (isAc ? 2.0 : 1.0);
         this.vel.x -= Math.cos(finalAngle) * recoilMag;
         this.vel.y -= Math.sin(finalAngle) * recoilMag;
 
