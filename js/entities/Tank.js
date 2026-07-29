@@ -8,8 +8,8 @@ export class Tank extends Entity {
     super(x, y, 26, 12);
 
     this.type = 'tank';
-    this.name = name;
-    this.color = color;
+    this.name = name || 'Pilot';
+    this.color = color || '#00b2e7';
     this.isBot = isBot;
 
     this.level = 1;
@@ -30,6 +30,7 @@ export class Tank extends Entity {
     this.reloadTimers = [0];
     this.recoilVel = { x: 0, y: 0 };
     this.lastFiredTime = 0;
+    this.hitFlashTimer = 0;
 
     // Equipped Cosmetic Visuals
     this.equippedSkin = null;
@@ -139,7 +140,6 @@ export class Tank extends Entity {
         const bPen = isAc ? 500 : 20 * penStat;
         const bRadius = (b.width ? b.width * 0.45 : 8) * (this.radius / 26);
 
-        // Gradient or custom bullet color
         const bColor = isAc ? '#ffe869' : (this.color || '#00b2e7');
 
         const bullet = new Bullet(muzzleX, muzzleY, vx, vy, bRadius, bDmg, bPen, bSpeed, this, bColor);
@@ -163,8 +163,10 @@ export class Tank extends Entity {
   }
 
   draw(ctx, camera) {
+    if (!ctx || !camera) return;
+
     const screen = camera.worldToScreen(this.pos.x, this.pos.y);
-    const renderRadius = this.radius * camera.zoom;
+    const renderRadius = this.radius * (camera.zoom || 1.35);
 
     if (
       screen.x < -200 || screen.x > camera.viewportWidth + 200 ||
@@ -176,22 +178,24 @@ export class Tank extends Entity {
     ctx.save();
     ctx.translate(screen.x, screen.y);
 
-    // 1. Draw Equipped Aura Effect (Outer Halo / Energy Ring)
-    if (this.equippedEffect) {
-      ctx.save();
-      ctx.strokeStyle = this.equippedEffect.color || '#00e676';
-      ctx.lineWidth = 4 * camera.zoom;
-      ctx.shadowColor = this.equippedEffect.color || '#00e676';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(0, 0, renderRadius + 8 * camera.zoom, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+    // 1. Draw Equipped Aura Effect
+    if (this.equippedEffect && this.equippedEffect.color) {
+      try {
+        ctx.save();
+        ctx.strokeStyle = this.equippedEffect.color || '#00e676';
+        ctx.lineWidth = 4 * camera.zoom;
+        ctx.shadowColor = this.equippedEffect.color || '#00e676';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(0, 0, renderRadius + 8 * camera.zoom, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } catch (e) {}
     }
 
     // 2. Draw Barrels / Cannons
     ctx.save();
-    ctx.rotate(this.angle);
+    ctx.rotate(this.angle || 0);
     ctx.fillStyle = '#999999';
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = Math.max(2, renderRadius * 0.15);
@@ -205,15 +209,19 @@ export class Tank extends Entity {
     });
     ctx.restore();
 
-    // 3. Draw Tank Body (with Gradient Skin support!)
+    // 3. Draw Tank Body (Bulletproof Gradient Skin support!)
     ctx.save();
-    if (this.equippedSkin && this.equippedSkin.colors) {
-      const grad = ctx.createLinearGradient(-renderRadius, -renderRadius, renderRadius, renderRadius);
-      grad.addColorStop(0, this.equippedSkin.colors[0]);
-      grad.addColorStop(1, this.equippedSkin.colors[1]);
-      ctx.fillStyle = grad;
+    if (this.equippedSkin && Array.isArray(this.equippedSkin.colors) && this.equippedSkin.colors.length >= 2) {
+      try {
+        const grad = ctx.createLinearGradient(-renderRadius, -renderRadius, renderRadius, renderRadius);
+        grad.addColorStop(0, this.equippedSkin.colors[0]);
+        grad.addColorStop(1, this.equippedSkin.colors[1]);
+        ctx.fillStyle = grad;
+      } catch (e) {
+        ctx.fillStyle = this.color || '#00b2e7';
+      }
     } else {
-      ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : this.color;
+      ctx.fillStyle = (this.hitFlashTimer && this.hitFlashTimer > 0) ? '#ffffff' : (this.color || '#00b2e7');
     }
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = Math.max(2.5, renderRadius * 0.15);
@@ -226,19 +234,21 @@ export class Tank extends Entity {
 
     // 4. Draw Orbiting Companion Pet
     if (this.equippedPet) {
-      const petDist = renderRadius + 22 * camera.zoom;
-      const px = Math.cos(this.petAngle) * petDist;
-      const py = Math.sin(this.petAngle) * petDist;
+      try {
+        const petDist = renderRadius + 22 * camera.zoom;
+        const px = Math.cos(this.petAngle || 0) * petDist;
+        const py = Math.sin(this.petAngle || 0) * petDist;
 
-      ctx.save();
-      ctx.fillStyle = this.equippedPet.color || '#ffe869';
-      ctx.strokeStyle = '#333333';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(px, py, 7 * camera.zoom, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+        ctx.save();
+        ctx.fillStyle = this.equippedPet.color || '#ffe869';
+        ctx.strokeStyle = '#333333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 7 * camera.zoom, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      } catch (e) {}
     }
 
     ctx.restore();
@@ -248,27 +258,29 @@ export class Tank extends Entity {
   }
 
   drawNameAndHealth(ctx, camera, screen, renderRadius) {
-    ctx.save();
-    ctx.font = `700 ${Math.max(12, 13 * camera.zoom)}px 'Ubuntu', sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeText(this.name, screen.x, screen.y - renderRadius - 12 * camera.zoom);
-    ctx.fillText(this.name, screen.x, screen.y - renderRadius - 12 * camera.zoom);
+    try {
+      ctx.save();
+      ctx.font = `700 ${Math.max(12, 13 * camera.zoom)}px 'Ubuntu', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeText(this.name || 'Pilot', screen.x, screen.y - renderRadius - 12 * camera.zoom);
+      ctx.fillText(this.name || 'Pilot', screen.x, screen.y - renderRadius - 12 * camera.zoom);
 
-    if (this.health < this.maxHealth) {
-      const barW = renderRadius * 2.2;
-      const barH = 5 * camera.zoom;
-      const barX = screen.x - barW / 2;
-      const barY = screen.y + renderRadius + 10 * camera.zoom;
-      const hpPercent = Math.max(0, this.health / this.maxHealth);
+      if (this.health < this.maxHealth) {
+        const barW = renderRadius * 2.2;
+        const barH = 5 * camera.zoom;
+        const barX = screen.x - barW / 2;
+        const barY = screen.y + renderRadius + 10 * camera.zoom;
+        const hpPercent = Math.max(0, this.health / this.maxHealth);
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-      ctx.fillRect(barX, barY, barW, barH);
-      ctx.fillStyle = '#85e37d';
-      ctx.fillRect(barX, barY, barW * hpPercent, barH);
-    }
-    ctx.restore();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = '#85e37d';
+        ctx.fillRect(barX, barY, barW * hpPercent, barH);
+      }
+      ctx.restore();
+    } catch (e) {}
   }
 }

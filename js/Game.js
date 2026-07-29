@@ -67,7 +67,6 @@ export class Game {
     this.tanks.push(this.player);
 
     if (this.networkManager) {
-      // Re-add existing active remote tanks into the tanks array
       this.networkManager.remoteTanksMap.forEach((remoteTank) => {
         this.tanks.push(remoteTank);
       });
@@ -99,76 +98,87 @@ export class Game {
   update(dt = 1) {
     if (this.state !== 'PLAYING') return;
 
-    this.survivalTime += 0.016 * dt;
+    try {
+      this.survivalTime += 0.016 * dt;
 
-    // Controls & Camera
-    this.inputManager.updatePlayerControls(this.player, this.camera);
-    this.camera.update(this.player, 0.08);
+      // Controls & Camera
+      if (this.player) {
+        this.inputManager.updatePlayerControls(this.player, this.camera);
+        this.camera.update(this.player, 0.08);
 
-    // Stream exact player position & state payload to WebSocket server
-    if (this.player && this.networkManager.connected) {
-      this.networkManager.sendInput(this.player);
-    }
-
-    // Tanks updates & boundary checks
-    for (let i = this.tanks.length - 1; i >= 0; i--) {
-      const t = this.tanks[i];
-      t.update(dt, this);
-      this.collisionEngine.resolveBoundaryCollision(t);
-
-      if (t.dead) {
-        if (t === this.player && !t.godMode) {
-          this.state = 'GAMEOVER';
-          this.hudManager.showGameOver(this.player, this.survivalTime);
-        } else if (t === this.player && t.godMode) {
-          t.dead = false;
-          t.health = t.maxHealth;
+        if (this.networkManager.connected) {
+          this.networkManager.sendInput(this.player);
         }
       }
-    }
 
-    this.particleManager.update(dt);
+      // Tanks updates & boundary checks
+      for (let i = this.tanks.length - 1; i >= 0; i--) {
+        const t = this.tanks[i];
+        if (t) {
+          t.update(dt, this);
+          this.collisionEngine.resolveBoundaryCollision(t);
 
-    // Hard Solid Tank-Shape & Tank-Tank Collision Resolution
-    this.spatialGrid.clear();
-    for (let i = 0; i < this.shapes.length; i++) this.spatialGrid.insert(this.shapes[i]);
-    for (let i = 0; i < this.tanks.length; i++) this.spatialGrid.insert(this.tanks[i]);
-
-    for (let i = 0; i < this.tanks.length; i++) {
-      const tank = this.tanks[i];
-      if (tank.dead) continue;
-
-      const nearby = this.spatialGrid.getNearby(tank);
-      for (let j = 0; j < nearby.length; j++) {
-        const other = nearby[j];
-        if (other !== tank) {
-          this.collisionEngine.resolveElasticCollision(tank, other, dt);
+          if (t.dead) {
+            if (t === this.player && !t.godMode) {
+              this.state = 'GAMEOVER';
+              this.hudManager.showGameOver(this.player, this.survivalTime);
+            } else if (t === this.player && t.godMode) {
+              t.dead = false;
+              t.health = t.maxHealth;
+            }
+          }
         }
       }
-    }
 
-    this.hudManager.update(this.player, this.tanks);
+      this.particleManager.update(dt);
+
+      // Hard Solid Tank-Shape & Tank-Tank Collision Resolution
+      this.spatialGrid.clear();
+      for (let i = 0; i < this.shapes.length; i++) this.spatialGrid.insert(this.shapes[i]);
+      for (let i = 0; i < this.tanks.length; i++) this.spatialGrid.insert(this.tanks[i]);
+
+      for (let i = 0; i < this.tanks.length; i++) {
+        const tank = this.tanks[i];
+        if (tank && !tank.dead) {
+          const nearby = this.spatialGrid.getNearby(tank);
+          for (let j = 0; j < nearby.length; j++) {
+            const other = nearby[j];
+            if (other && other !== tank) {
+              this.collisionEngine.resolveElasticCollision(tank, other, dt);
+            }
+          }
+        }
+      }
+
+      this.hudManager.update(this.player, this.tanks);
+    } catch (e) {
+      console.error("Game update error:", e);
+    }
   }
 
   render() {
-    this.renderer.clear();
+    try {
+      this.renderer.clear();
 
-    if (this.state === 'PLAYING' || this.state === 'GAMEOVER') {
-      this.renderer.drawGrid(this.camera, this.arenaWidth, this.arenaHeight);
+      if (this.state === 'PLAYING' || this.state === 'GAMEOVER') {
+        this.renderer.drawGrid(this.camera, this.arenaWidth, this.arenaHeight);
 
-      for (let i = 0; i < this.shapes.length; i++) {
-        this.shapes[i].draw(this.renderer.ctx, this.camera);
+        for (let i = 0; i < this.shapes.length; i++) {
+          if (this.shapes[i]) this.shapes[i].draw(this.renderer.ctx, this.camera);
+        }
+
+        for (let i = 0; i < this.bullets.length; i++) {
+          if (this.bullets[i]) this.bullets[i].draw(this.renderer.ctx, this.camera);
+        }
+
+        for (let i = 0; i < this.tanks.length; i++) {
+          if (this.tanks[i]) this.tanks[i].draw(this.renderer.ctx, this.camera);
+        }
+
+        this.particleManager.draw(this.renderer.ctx, this.camera);
       }
-
-      for (let i = 0; i < this.bullets.length; i++) {
-        this.bullets[i].draw(this.renderer.ctx, this.camera);
-      }
-
-      for (let i = 0; i < this.tanks.length; i++) {
-        this.tanks[i].draw(this.renderer.ctx, this.camera);
-      }
-
-      this.particleManager.draw(this.renderer.ctx, this.camera);
+    } catch (e) {
+      console.error("Game render error:", e);
     }
   }
 
