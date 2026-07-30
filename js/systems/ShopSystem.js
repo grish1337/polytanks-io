@@ -143,7 +143,7 @@ export const CHALLENGES = [
 
 export class ShopSystem {
   constructor() {
-    this.stars = 2141; // Initial stars balance as shown in reference screenshot!
+    this.stars = 2141; // Initial stars balance
     this.unlockedItems = new Set(['grad_neon', 'effect_plasma']); // Free starter items
     this.equippedSkinId = 'grad_neon';
     this.equippedEffectId = 'effect_plasma';
@@ -159,6 +159,14 @@ export class ShopSystem {
     this.claimedChallenges = new Set();
 
     this.loadState();
+  }
+
+  isOwned(itemId) {
+    return this.unlockedItems.has(itemId);
+  }
+
+  isEquipped(itemId) {
+    return this.equippedSkinId === itemId || this.equippedEffectId === itemId || this.equippedPetId === itemId;
   }
 
   loadState() {

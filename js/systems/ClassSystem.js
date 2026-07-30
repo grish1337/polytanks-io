@@ -54,7 +54,7 @@ export const TANK_CLASSES = {
     requiredLevel: 15,
     nextTierRequiredLevel: 30,
     barrels: [
-      { height: 56, width: 22, offsetY: 0, angleOffset: 0, recoil: 4.0, reloadMult: 0.65, damageMult: 1.7, speedMult: 1.5, sizeMult: 1.1 }
+      { height: 56, width: 22, offsetY: 0, angleOffset: 0, recoil: 4.0, reloadMult: 0.50, damageMult: 1.4, speedMult: 1.5, sizeMult: 1.1 }
     ],
     evolvesTo: ['assassin', 'hunter'],
     abilityName: 'Eagle Vision',
@@ -131,7 +131,7 @@ export const TANK_CLASSES = {
     requiredLevel: 30,
     nextTierRequiredLevel: 45,
     barrels: [
-      { height: 68, width: 22, offsetY: 0, angleOffset: 0, recoil: 5.0, reloadMult: 0.5, damageMult: 2.4, speedMult: 1.8, sizeMult: 1.2 }
+      { height: 68, width: 22, offsetY: 0, angleOffset: 0, recoil: 5.0, reloadMult: 0.35, damageMult: 1.8, speedMult: 1.8, sizeMult: 1.2 }
     ],
     evolvesTo: ['ranger'],
     abilityName: 'Headshot',
@@ -145,7 +145,7 @@ export const TANK_CLASSES = {
     requiredLevel: 30,
     nextTierRequiredLevel: 45,
     barrels: [
-      { height: 44, width: 44, offsetY: 0, angleOffset: 0, recoil: 12.0, reloadMult: 0.35, damageMult: 4.5, speedMult: 0.8, sizeMult: 2.2 }
+      { height: 44, width: 44, offsetY: 0, angleOffset: 0, recoil: 12.0, reloadMult: 0.20, damageMult: 3.8, speedMult: 0.8, sizeMult: 2.2 }
     ],
     evolvesTo: ['annihilator'],
     abilityName: 'Blast Pulse',
@@ -213,7 +213,7 @@ export const TANK_CLASSES = {
     requiredLevel: 45,
     nextTierRequiredLevel: 999,
     barrels: [
-      { height: 76, width: 24, offsetY: 0, angleOffset: 0, recoil: 6.0, reloadMult: 0.45, damageMult: 3.2, speedMult: 2.2, sizeMult: 1.3 }
+      { height: 76, width: 24, offsetY: 0, angleOffset: 0, recoil: 6.0, reloadMult: 0.30, damageMult: 2.2, speedMult: 2.2, sizeMult: 1.3 }
     ],
     abilityName: 'Eagle Vision',
     cooldown: 8.0
@@ -226,7 +226,7 @@ export const TANK_CLASSES = {
     requiredLevel: 45,
     nextTierRequiredLevel: 999,
     barrels: [
-      { height: 48, width: 56, offsetY: 0, angleOffset: 0, recoil: 18.0, reloadMult: 0.3, damageMult: 7.0, speedMult: 0.85, sizeMult: 2.8 }
+      { height: 48, width: 56, offsetY: 0, angleOffset: 0, recoil: 18.0, reloadMult: 0.15, damageMult: 5.0, speedMult: 0.85, sizeMult: 2.8 }
     ],
     abilityName: 'Blast Pulse',
     cooldown: 9.0

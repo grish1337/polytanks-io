@@ -159,7 +159,7 @@ wss.on('connection', (ws) => {
     } catch (e) {}
   });
 
-  ws.on('close', () => {
+  ws.onclose = () => {
     clients.delete(ws);
     players.delete(playerId);
   });
@@ -204,7 +204,8 @@ setInterval(() => {
           s.x = 100 + Math.random() * (ARENA_WIDTH - 200);
           s.y = 100 + Math.random() * (ARENA_HEIGHT - 200);
           s.hp = s.maxHp;
-          p.score += 100;
+          const xpAwarded = s.type === 'alpha_pentagon' ? 3000 : (s.type === 'pentagon' ? 130 : (s.type === 'triangle' ? 25 : 10));
+          p.score += xpAwarded;
         }
       }
     });
@@ -296,7 +297,10 @@ setInterval(() => {
             s.x = 100 + Math.random() * (ARENA_WIDTH - 200);
             s.y = 100 + Math.random() * (ARENA_HEIGHT - 200);
             s.hp = s.maxHp;
-            if (shooter) shooter.score += 100;
+            if (shooter) {
+              const xpAwarded = s.type === 'alpha_pentagon' ? 3000 : (s.type === 'pentagon' ? 130 : (s.type === 'triangle' ? 25 : 10));
+              shooter.score += xpAwarded;
+            }
           }
         }
       });
