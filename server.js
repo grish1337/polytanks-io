@@ -9,7 +9,11 @@ const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 8080;
 
-// Serve static game files
+// Serve static game files with Cache-Control no-cache header to prevent browser caching!
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  next();
+});
 app.use(express.static(__dirname));
 
 app.get('*', (req, res) => {
@@ -25,7 +29,7 @@ const players = new Map();
 let shapes = [];
 let bullets = [];
 
-// Deterministic Seeded Shape Generator with Diep.io Ambient Floating Velocities
+// Deterministic Seeded Shape Generator
 function initShapes() {
   shapes = [];
   for (let i = 0; i < 350; i++) {
@@ -33,7 +37,6 @@ function initShapes() {
     const radius = shapeType === 'alpha_pentagon' ? 75 : (shapeType === 'pentagon' ? 30 : (shapeType === 'triangle' ? 20 : 16));
     const hp = shapeType === 'alpha_pentagon' ? 1000 : (shapeType === 'pentagon' ? 100 : (shapeType === 'triangle' ? 30 : 10));
     
-    // Seeded placement
     const seedX = (Math.sin(i * 12.9898 + 78.233) * 43758.5453) % 1;
     const seedY = (Math.cos(i * 12.9898 + 78.233) * 43758.5453) % 1;
     const x = 100 + Math.abs(seedX) * (ARENA_WIDTH - 200);
@@ -53,7 +56,7 @@ function initShapes() {
 }
 initShapes();
 
-// WebSocket Handler (Only spawn players in arena when they click PLAY GAME!)
+// WebSocket Handler
 wss.on('connection', (ws) => {
   const playerId = `player_${Math.floor(10000 + Math.random() * 90000)}`;
   clients.set(ws, playerId);
@@ -86,6 +89,7 @@ wss.on('connection', (ws) => {
             hp: 100,
             maxHp: 100,
             classId: 'basic',
+            lastShootTime: 0,
             equippedSkinId: data.equippedSkinId || null,
             equippedEffectId: data.equippedEffectId || null,
             equippedPetId: data.equippedPetId || null
@@ -121,6 +125,7 @@ wss.on('connection', (ws) => {
             hp: 100,
             maxHp: 100,
             classId: 'basic',
+            lastShootTime: 0,
             equippedSkinId: data.equippedSkinId || null,
             equippedEffectId: data.equippedEffectId || null,
             equippedPetId: data.equippedPetId || null
@@ -142,6 +147,14 @@ wss.on('connection', (ws) => {
           if (data.color) player.color = data.color;
         }
       } else if (data.type === 'SHOOT') {
+        const player = players.get(playerId);
+        const now = Date.now();
+        // Enforce minimum 80ms reload cooldown per player on server!
+        if (player && now - (player.lastShootTime || 0) < 80) {
+          return;
+        }
+        if (player) player.lastShootTime = now;
+
         const radius = data.radius || 8;
         bullets.push({
           id: `b_${Math.floor(100000 + Math.random() * 900000)}`,
@@ -167,16 +180,13 @@ wss.on('connection', (ws) => {
 
 // 60 Hz Server Physics Loop
 setInterval(() => {
-  // 0. Update Ambient Diep.io Shape Floating Movement
   shapes.forEach((s) => {
     s.x += s.vx;
     s.y += s.vy;
-
     if (s.x < 100 || s.x > ARENA_WIDTH - 100) s.vx = -s.vx;
     if (s.y < 100 || s.y > ARENA_HEIGHT - 100) s.vy = -s.vy;
   });
 
-  // 1. Soft Pleasant Tank-Shape Ramming & Collisions
   players.forEach((p) => {
     if (p.classId === 'arena_closer') return;
 
@@ -211,32 +221,7 @@ setInterval(() => {
     });
   });
 
-  // 2. Diep.io Bullet vs Bullet Deflection Momentum
-  for (let i = 0; i < bullets.length; i++) {
-    for (let j = i + 1; j < bullets.length; j++) {
-      const b1 = bullets[i];
-      const b2 = bullets[j];
-      if (b1.ownerId !== b2.ownerId) {
-        const dx = b2.x - b1.x;
-        const dy = b2.y - b1.y;
-        const distSq = dx * dx + dy * dy;
-        const minDist = b1.radius + b2.radius;
-        if (distSq < minDist * minDist) {
-          const dist = Math.sqrt(distSq) || 1;
-          const nx = dx / dist;
-          const ny = dy / dist;
-          b1.vx -= nx * 2.5;
-          b1.vy -= ny * 2.5;
-          b2.vx += nx * 2.5;
-          b2.vy += ny * 2.5;
-          b1.hp -= 15;
-          b2.hp -= 15;
-        }
-      }
-    }
-  }
-
-  // 3. Bullets & Bullet HP Penetration & Knockback Deflection Mechanics
+  // Bullets
   const newBullets = [];
   bullets.forEach((b) => {
     b.x += b.vx;
@@ -244,7 +229,6 @@ setInterval(() => {
     b.life -= 1;
 
     if (b.life > 0 && b.hp > 0 && b.x >= 0 && b.x <= ARENA_WIDTH && b.y >= 0 && b.y <= ARENA_HEIGHT) {
-      // PVP Player Bullet Damage & Deflection
       players.forEach((targetP, targetId) => {
         if (targetId !== b.ownerId && targetP.classId !== 'arena_closer') {
           const dx = targetP.x - b.x;
@@ -271,7 +255,6 @@ setInterval(() => {
         }
       });
 
-      // Shape Bullet Damage, Piercing & Momentum Deflection
       const shooter = players.get(b.ownerId);
       const isAc = shooter && shooter.classId === 'arena_closer';
       const dmg = isAc ? 500 : (b.radius > 18 ? 30 : 18);
@@ -312,7 +295,6 @@ setInterval(() => {
   });
   bullets = newBullets;
 
-  // Broadcast 60 Hz Snapshot
   const snapshot = JSON.stringify({
     type: 'UPDATE',
     players: Array.from(players.values()),
@@ -327,7 +309,6 @@ setInterval(() => {
   });
 }, 16);
 
-// Listen on 0.0.0.0 and PORT for Render.com
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🎮 PolyTanks Server running on port ${PORT}`);
+  console.log(`[SERVER] PolyTanks running on port ${PORT}`);
 });

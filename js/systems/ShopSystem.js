@@ -53,7 +53,7 @@ export const SHOP_ITEMS = [
     description: 'Cute mini cyber droid that orbits your tank in battle.'
   },
 
-  // Premium / Mythic Row (Fair balanced prices!)
+  // Premium / Mythic Row
   {
     id: 'grad_void',
     name: 'Void Eclipse',
@@ -143,13 +143,12 @@ export const CHALLENGES = [
 
 export class ShopSystem {
   constructor() {
-    this.stars = 2141; // Initial stars balance
-    this.unlockedItems = new Set(['grad_neon', 'effect_plasma']); // Free starter items
+    this.stars = 2141;
+    this.unlockedItems = new Set(['grad_neon', 'effect_plasma']);
     this.equippedSkinId = 'grad_neon';
     this.equippedEffectId = 'effect_plasma';
     this.equippedPetId = null;
 
-    // Challenge Progress
     this.progress = {
       shapeKills: 0,
       playerKills: 0,
@@ -161,12 +160,27 @@ export class ShopSystem {
     this.loadState();
   }
 
+  get challenges() {
+    return CHALLENGES.map(c => ({
+      ...c,
+      progress: this.progress[c.key] || 0,
+      completed: this.claimedChallenges.has(c.id)
+    }));
+  }
+
   isOwned(itemId) {
     return this.unlockedItems.has(itemId);
   }
 
   isEquipped(itemId) {
     return this.equippedSkinId === itemId || this.equippedEffectId === itemId || this.equippedPetId === itemId;
+  }
+
+  updateChallengeProgress(key, amount) {
+    if (this.progress[key] !== undefined) {
+      this.progress[key] = Math.max(this.progress[key], amount);
+      this.saveState();
+    }
   }
 
   loadState() {
@@ -236,7 +250,7 @@ export class ShopSystem {
     } else if (item.category === 'effect') {
       this.equippedEffectId = itemId;
     } else if (item.category === 'pet') {
-      this.equippedPetId = this.equippedPetId === itemId ? null : itemId; // Toggle pet
+      this.equippedPetId = this.equippedPetId === itemId ? null : itemId;
     }
     this.saveState();
     return true;

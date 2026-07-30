@@ -117,14 +117,14 @@ export class Tank extends Entity {
     if (cid === 'overseer' || cid === 'overlord' || cid === 'necromancer') return;
 
     const reloadStat = this.upgradeSystem.getMultiplier('reloadSpeed');
-    const baseReload = (cid === 'arena_closer') ? 3 : 15;
-    const reloadTicks = Math.max(3, baseReload / reloadStat);
-
+    const baseReload = (cid === 'arena_closer') ? 4 : 16;
     const barrels = this.classInfo.barrels || [{ angleOffset: 0, height: 42, width: 24, recoil: 4 }];
 
     barrels.forEach((b, idx) => {
-      const timerVal = this.reloadTimers[idx] !== undefined ? this.reloadTimers[idx] : 0;
+      const timerVal = (this.reloadTimers[idx] !== undefined) ? this.reloadTimers[idx] : 0;
       if (timerVal <= 0) {
+        const barrelReloadMult = (b.reloadMult !== undefined && b.reloadMult > 0) ? b.reloadMult : 1.0;
+        const reloadTicks = Math.max(4, (baseReload / barrelReloadMult) / reloadStat);
         this.reloadTimers[idx] = reloadTicks;
 
         const finalAngle = this.angle + (b.angleOffset || 0);
@@ -196,7 +196,7 @@ export class Tank extends Entity {
       } catch (e) {}
     }
 
-    // 2. Draw Barrels / Cannons with precise angleOffset & length!
+    // 2. Draw Barrels / Cannons
     ctx.save();
     ctx.rotate(this.angle || 0);
     ctx.fillStyle = '#999999';

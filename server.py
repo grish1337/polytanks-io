@@ -4,6 +4,7 @@ import random
 import math
 import os
 import sys
+import time
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import threading
 import websockets
@@ -94,6 +95,7 @@ async def handler(websocket):
                             'hp': 100,
                             'maxHp': 100,
                             'classId': 'basic',
+                            'lastShootTime': 0,
                             'equippedSkinId': data.get('equippedSkinId'),
                             'equippedEffectId': data.get('equippedEffectId'),
                             'equippedPetId': data.get('equippedPetId')
@@ -128,6 +130,7 @@ async def handler(websocket):
                             'hp': 100,
                             'maxHp': 100,
                             'classId': 'basic',
+                            'lastShootTime': 0,
                             'equippedSkinId': data.get('equippedSkinId'),
                             'equippedEffectId': data.get('equippedEffectId'),
                             'equippedPetId': data.get('equippedPetId')
@@ -148,6 +151,13 @@ async def handler(websocket):
                         if data.get('color'): p['color'] = data.get('color')
 
                 elif msg_type == 'SHOOT':
+                    p = players.get(player_id)
+                    now_ms = time.time() * 1000.0
+                    if p and (now_ms - p.get('lastShootTime', 0)) < 80.0:
+                        continue
+                    if p:
+                        p['lastShootTime'] = now_ms
+
                     radius = data.get('radius', 8)
                     bullets.append({
                         'id': f"b_{random.randint(100000, 999999)}",
@@ -175,14 +185,12 @@ async def broadcast_loop():
     rng = random.Random()
 
     while True:
-        # Ambient shape drift
         for s in shapes:
             s['x'] += s.get('vx', 0)
             s['y'] += s.get('vy', 0)
             if s['x'] < 100 or s['x'] > ARENA_WIDTH - 100: s['vx'] = -s.get('vx', 0)
             if s['y'] < 100 or s['y'] > ARENA_HEIGHT - 100: s['vy'] = -s.get('vy', 0)
 
-        # Soft Pleasant Tank-Shape Ramming
         for p_id, p in players.items():
             if p.get('classId') == 'arena_closer': continue
 
@@ -212,7 +220,6 @@ async def broadcast_loop():
                         xp_awarded = 3000 if s['type'] == 'alpha_pentagon' else (130 if s['type'] == 'pentagon' else (25 if s['type'] == 'triangle' else 10))
                         p['score'] += xp_awarded
 
-        # Bullet Health & Piercing Mechanics
         new_bullets = []
         for b in bullets:
             b['x'] += b['vx']
@@ -220,7 +227,6 @@ async def broadcast_loop():
             b['life'] -= 1
 
             if b['life'] > 0 and b.get('hp', 10) > 0 and 0 <= b['x'] <= ARENA_WIDTH and 0 <= b['y'] <= ARENA_HEIGHT:
-                # PVP Player Damage
                 for target_id, target_p in players.items():
                     if target_id != b['ownerId'] and target_p.get('classId') != 'arena_closer':
                         p_dx = target_p['x'] - b['x']
@@ -234,7 +240,6 @@ async def broadcast_loop():
                                 if shooter: shooter['score'] += int(target_p['score'] * 0.5) + 500
                             break
 
-                # Shape Damage & Bullet HP Subtraction
                 shooter = players.get(b['ownerId'])
                 is_ac = shooter and shooter.get('classId') == 'arena_closer'
                 bullet_dmg = 500 if is_ac else (30 if b.get('radius', 8) > 18 else 18)
