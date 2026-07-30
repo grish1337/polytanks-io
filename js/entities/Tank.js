@@ -29,7 +29,7 @@ export class Tank extends Entity {
     this.godMode = false;
 
     this.angle = 0;
-    this.reloadTimers = [0];
+    this.reloadTimers = new Array(16).fill(0);
     this.recoilVel = { x: 0, y: 0 };
     this.lastFiredTime = 0;
     this.hitFlashTimer = 0;
@@ -95,11 +95,9 @@ export class Tank extends Entity {
       this.health = Math.min(this.maxHealth, this.health + 0.05 * regenStat * dt);
     }
 
-    // Reload Timers
+    // Reload Timers (Decrements reliably each frame!)
     for (let i = 0; i < this.reloadTimers.length; i++) {
-      if (this.reloadTimers[i] > 0) {
-        this.reloadTimers[i] -= 1 * dt;
-      }
+      this.reloadTimers[i] = Math.max(0, (this.reloadTimers[i] || 0) - 1 * dt);
     }
 
     // Orbiting Pet Motion
@@ -120,12 +118,13 @@ export class Tank extends Entity {
 
     const reloadStat = this.upgradeSystem.getMultiplier('reloadSpeed');
     const baseReload = (cid === 'arena_closer') ? 3 : 15;
-    const reloadTicks = Math.max(2, baseReload / reloadStat);
+    const reloadTicks = Math.max(3, baseReload / reloadStat);
 
     const barrels = this.classInfo.barrels || [{ angleOffset: 0, height: 42, width: 24, recoil: 4 }];
 
     barrels.forEach((b, idx) => {
-      if (this.reloadTimers[idx] <= 0) {
+      const timerVal = this.reloadTimers[idx] !== undefined ? this.reloadTimers[idx] : 0;
+      if (timerVal <= 0) {
         this.reloadTimers[idx] = reloadTicks;
 
         const finalAngle = this.angle + (b.angleOffset || 0);

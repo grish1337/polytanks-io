@@ -203,11 +203,11 @@ export class HUDManager {
   renderShopMarketplace() {
     const shopGrid = document.getElementById('shopGrid');
     const starBalance = document.getElementById('starBalance');
+    const subheader = document.querySelector('.florr-subheader span');
     if (!shopGrid) return;
 
-    if (starBalance) {
-      starBalance.innerText = this.shopSystem.stars;
-    }
+    if (subheader) subheader.innerText = "Today's Offers";
+    if (starBalance) starBalance.innerText = this.shopSystem.stars;
 
     shopGrid.innerHTML = '';
 
@@ -217,11 +217,6 @@ export class HUDManager {
       const isOwned = this.shopSystem.isOwned(item.id);
 
       card.className = `florr-item-card ${isEquipped ? 'equipped' : ''}`;
-
-      let descText = item.type.toUpperCase();
-      let iconColor = '#00b2e7';
-      if (item.colors) iconColor = item.colors[0];
-      if (item.color) iconColor = item.color;
 
       card.innerHTML = `
         ${item.discount ? `<div class="florr-discount-tag">${item.discount}</div>` : ''}
@@ -266,31 +261,30 @@ export class HUDManager {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, 70, 70);
 
-      // Render Mini Tank Model with cosmetic!
       ctx.save();
       ctx.translate(35, 35);
 
-      // Aura halo preview
-      if (item.type === 'effect' && item.color) {
-        ctx.strokeStyle = item.color;
+      // Distinct preview for each item type!
+      if (item.type === 'aura' || item.type === 'halo') {
+        ctx.strokeStyle = item.color || '#00e676';
         ctx.lineWidth = 3;
-        ctx.shadowColor = item.color;
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = item.color || '#00e676';
+        ctx.shadowBlur = 10;
         ctx.beginPath();
-        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.arc(0, 0, 24, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      // Barrel
+      // Tank Cannon Barrel
       ctx.fillStyle = '#999999';
       ctx.strokeStyle = '#555555';
       ctx.lineWidth = 2;
       ctx.fillRect(0, -6, 22, 12);
       ctx.strokeRect(0, -6, 22, 12);
 
-      // Body Gradient preview
+      // Tank Body Skin Preview
       ctx.save();
-      if (item.type === 'skin' && item.colors) {
+      if (item.colors && item.colors.length >= 2) {
         const grad = ctx.createLinearGradient(-16, -16, 16, 16);
         grad.addColorStop(0, item.colors[0]);
         grad.addColorStop(1, item.colors[1]);
@@ -306,13 +300,13 @@ export class HUDManager {
       ctx.stroke();
       ctx.restore();
 
-      // Pet preview
-      if (item.type === 'pet' && item.color) {
+      // Pet companion preview
+      if (item.category === 'pet' && item.color) {
         ctx.fillStyle = item.color;
         ctx.strokeStyle = '#222222';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(22, -14, 5, 0, Math.PI * 2);
+        ctx.arc(22, -14, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
@@ -323,7 +317,10 @@ export class HUDManager {
 
   renderChallengesTab() {
     const shopGrid = document.getElementById('shopGrid');
+    const subheader = document.querySelector('.florr-subheader span');
     if (!shopGrid) return;
+
+    if (subheader) subheader.innerText = "Challenge Quests";
 
     shopGrid.innerHTML = '';
 
