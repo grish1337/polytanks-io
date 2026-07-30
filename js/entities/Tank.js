@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
 import { Bullet } from './Bullet.js';
+import { DroneManager } from './DroneManager.js';
 import { TANK_CLASSES } from '../systems/ClassSystem.js';
 import { UpgradeSystem } from '../systems/UpgradeSystem.js';
 
@@ -20,6 +21,7 @@ export class Tank extends Entity {
 
     this.classInfo = TANK_CLASSES.basic;
     this.upgradeSystem = new UpgradeSystem();
+    this.droneManager = new DroneManager(this);
 
     this.health = 100;
     this.maxHealth = 100;
@@ -78,7 +80,7 @@ export class Tank extends Entity {
     }
   }
 
-  update(dt = 1, game = null) {
+  update(dt = 1, game = null, isTargeting = false, targetPos = null) {
     super.update(dt);
 
     // Balanced Diep.io Smooth Physics Friction
@@ -102,13 +104,22 @@ export class Tank extends Entity {
 
     // Orbiting Pet Motion
     this.petAngle += 0.04 * dt;
+
+    // Update Drones
+    if (this.droneManager) {
+      this.droneManager.update(dt, game, isTargeting, targetPos);
+    }
   }
 
   shoot(game) {
     if (this.dead) return;
 
+    // Drone classes don't shoot standard bullets, they control drones!
+    const cid = this.classInfo.id;
+    if (cid === 'overseer' || cid === 'overlord' || cid === 'necromancer') return;
+
     const reloadStat = this.upgradeSystem.getMultiplier('reloadSpeed');
-    const baseReload = (this.classInfo.id === 'arena_closer') ? 3 : 15;
+    const baseReload = (cid === 'arena_closer') ? 3 : 15;
     const reloadTicks = Math.max(2, baseReload / reloadStat);
 
     const barrels = this.classInfo.barrels || [{ angleOffset: 0, height: 42, width: 24, recoil: 4 }];
@@ -123,13 +134,13 @@ export class Tank extends Entity {
         const muzzleY = this.pos.y + Math.sin(finalAngle) * barrelLen;
 
         const spdStat = this.upgradeSystem.getMultiplier('bulletSpeed');
-        const bSpeed = 10 * spdStat * (this.classInfo.id === 'arena_closer' ? 2.5 : 1);
+        const bSpeed = 10 * spdStat * (cid === 'arena_closer' ? 2.5 : 1);
         
         const vx = Math.cos(finalAngle) * bSpeed;
         const vy = Math.sin(finalAngle) * bSpeed;
 
         const bRadius = (b.width ? b.width * 0.45 : 8) * (this.radius / 26);
-        const isAc = (this.classInfo.id === 'arena_closer');
+        const isAc = (cid === 'arena_closer');
         const bColor = isAc ? '#ffe869' : (this.color || '#00b2e7');
 
         if (game.networkManager && game.networkManager.connected) {
@@ -143,7 +154,7 @@ export class Tank extends Entity {
           game.bullets.push(bullet);
         }
 
-        // Cannon recoil push (Scaled down for small, soft & pleasant firing!)
+        // Cannon recoil push
         const recoilMag = (b.recoil || 2) * 0.25 * (isAc ? 2.0 : 1.0);
         this.vel.x -= Math.cos(finalAngle) * recoilMag;
         this.vel.y -= Math.sin(finalAngle) * recoilMag;
@@ -253,7 +264,12 @@ export class Tank extends Entity {
 
     ctx.restore();
 
-    // 5. Draw Name Tag & Health Bar
+    // 5. Draw Drones
+    if (this.droneManager) {
+      this.droneManager.draw(ctx, camera);
+    }
+
+    // 6. Draw Name Tag & Health Bar
     this.drawNameAndHealth(ctx, camera, screen, renderRadius);
   }
 

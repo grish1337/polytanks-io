@@ -53,7 +53,7 @@ class GameHTTPRequestHandler(SimpleHTTPRequestHandler):
 def start_http_server():
     server_address = ('', HTTP_PORT)
     httpd = HTTPServer(server_address, GameHTTPRequestHandler)
-    print(f"HTTP Game Server serving on http://localhost:{HTTP_PORT}")
+    print(f"🎮 HTTP Game Server running on http://localhost:{HTTP_PORT}")
     httpd.serve_forever()
 
 http_thread = threading.Thread(target=start_http_server, daemon=True)
@@ -62,22 +62,6 @@ http_thread.start()
 async def handler(websocket):
     player_id = f"player_{random.randint(10000, 99999)}"
     clients.add(websocket)
-    
-    player_data = {
-        'id': player_id,
-        'name': 'Pilot',
-        'color': '#00b2e7',
-        'x': random.uniform(3000, 4000),
-        'y': random.uniform(3000, 4000),
-        'radius': 26,
-        'angle': 0,
-        'score': 0,
-        'level': 1,
-        'hp': 100,
-        'maxHp': 100,
-        'classId': 'basic'
-    }
-    players[player_id] = player_data
 
     init_msg = json.dumps({
         'type': 'INIT',
@@ -94,8 +78,61 @@ async def handler(websocket):
                 data = json.loads(message)
                 msg_type = data.get('type')
 
-                if msg_type == 'INPUT':
+                if msg_type in ('JOIN', 'RESPAWN'):
                     p = players.get(player_id)
+                    if not p:
+                        players[player_id] = {
+                            'id': player_id,
+                            'name': data.get('name', 'Tank'),
+                            'color': data.get('color', '#00b2e7'),
+                            'x': data.get('x', random.uniform(3000, 4000)),
+                            'y': data.get('y', random.uniform(3000, 4000)),
+                            'radius': 26,
+                            'angle': 0,
+                            'score': 0,
+                            'level': 1,
+                            'hp': 100,
+                            'maxHp': 100,
+                            'classId': 'basic',
+                            'equippedSkinId': data.get('equippedSkinId'),
+                            'equippedEffectId': data.get('equippedEffectId'),
+                            'equippedPetId': data.get('equippedPetId')
+                        }
+                    else:
+                        p['hp'] = 100
+                        p['maxHp'] = 100
+                        p['x'] = data.get('x', random.uniform(3000, 4000))
+                        p['y'] = data.get('y', random.uniform(3000, 4000))
+                        p['score'] = 0
+                        p['level'] = 1
+                        p['classId'] = 'basic'
+                        if data.get('name'): p['name'] = data.get('name')
+                        if data.get('color'): p['color'] = data.get('color')
+                        if data.get('equippedSkinId'): p['equippedSkinId'] = data.get('equippedSkinId')
+                        if data.get('equippedEffectId'): p['equippedEffectId'] = data.get('equippedEffectId')
+                        if data.get('equippedPetId'): p['equippedPetId'] = data.get('equippedPetId')
+
+                elif msg_type == 'INPUT':
+                    p = players.get(player_id)
+                    if not p and data.get('name'):
+                        p = {
+                            'id': player_id,
+                            'name': data.get('name', 'Tank'),
+                            'color': data.get('color', '#00b2e7'),
+                            'x': data.get('x', 3500),
+                            'y': data.get('y', 3500),
+                            'radius': 26,
+                            'angle': 0,
+                            'score': 0,
+                            'level': 1,
+                            'hp': 100,
+                            'maxHp': 100,
+                            'classId': 'basic',
+                            'equippedSkinId': data.get('equippedSkinId'),
+                            'equippedEffectId': data.get('equippedEffectId'),
+                            'equippedPetId': data.get('equippedPetId')
+                        }
+                        players[player_id] = p
                     if p:
                         p['x'] = data.get('x', p['x'])
                         p['y'] = data.get('y', p['y'])
@@ -104,19 +141,11 @@ async def handler(websocket):
                         p['level'] = data.get('level', p['level'])
                         p['score'] = data.get('score', p['score'])
                         p['classId'] = data.get('classId', p['classId'])
+                        p['equippedSkinId'] = data.get('equippedSkinId', p.get('equippedSkinId'))
+                        p['equippedEffectId'] = data.get('equippedEffectId', p.get('equippedEffectId'))
+                        p['equippedPetId'] = data.get('equippedPetId', p.get('equippedPetId'))
                         if data.get('name'): p['name'] = data.get('name')
                         if data.get('color'): p['color'] = data.get('color')
-
-                elif msg_type == 'RESPAWN':
-                    p = players.get(player_id)
-                    if p:
-                        p['hp'] = 100
-                        p['maxHp'] = 100
-                        p['x'] = data.get('x', random.uniform(3000, 4000))
-                        p['y'] = data.get('y', random.uniform(3000, 4000))
-                        p['score'] = 0
-                        p['level'] = 1
-                        p['classId'] = 'basic'
 
                 elif msg_type == 'SHOOT':
                     radius = data.get('radius', 8)
@@ -180,7 +209,8 @@ async def broadcast_loop():
                         s['x'] = rng.uniform(100, ARENA_WIDTH - 100)
                         s['y'] = rng.uniform(100, ARENA_HEIGHT - 100)
                         s['hp'] = s['maxHp']
-                        p['score'] += 100
+                        xp_awarded = 3000 if s['type'] == 'alpha_pentagon' else (130 if s['type'] == 'pentagon' else (25 if s['type'] == 'triangle' else 10))
+                        p['score'] += xp_awarded
 
         # Bullet Health & Piercing Mechanics
         new_bullets = []
@@ -220,7 +250,9 @@ async def broadcast_loop():
                             s['x'] = rng.uniform(100, ARENA_WIDTH - 100)
                             s['y'] = rng.uniform(100, ARENA_HEIGHT - 100)
                             s['hp'] = s['maxHp']
-                            if shooter: shooter['score'] += 100
+                            if shooter:
+                                xp_awarded = 3000 if s['type'] == 'alpha_pentagon' else (130 if s['type'] == 'pentagon' else (25 if s['type'] == 'triangle' else 10))
+                                shooter['score'] += xp_awarded
 
                 if b.get('hp', 0) > 0 and b['life'] > 0:
                     new_bullets.append(b)

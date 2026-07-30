@@ -6,6 +6,7 @@ export class InputManager {
     this.keys = {};
     this.mousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     this.isMouseDown = false;
+    this.isRightMouseDown = false;
 
     this.initListeners();
   }
@@ -102,14 +103,21 @@ export class InputManager {
     window.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
         this.isMouseDown = true;
+      } else if (e.button === 2) {
+        this.isRightMouseDown = true;
       }
     });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.isMouseDown = false;
+      } else if (e.button === 2) {
+        this.isRightMouseDown = false;
       }
     });
+
+    // Disable context menu so Right-Click can control drones smoothly
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   cycleNextClass() {
@@ -153,12 +161,17 @@ export class InputManager {
     player.vel.x += moveX * accel;
     player.vel.y += moveY * accel;
 
+    const worldMouse = camera ? camera.screenToWorld(this.mousePos.x, this.mousePos.y) : { x: player.pos.x + 100, y: player.pos.y };
+
     if (player.autoSpin) {
       player.angle += 0.05;
-    } else if (camera) {
-      const worldMouse = camera.screenToWorld(this.mousePos.x, this.mousePos.y);
+    } else {
       player.angle = Math.atan2(worldMouse.y - player.pos.y, worldMouse.x - player.pos.x);
     }
+
+    // Pass Right-Click / Shift drone targeting!
+    const isTargeting = this.isRightMouseDown || this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.isMouseDown;
+    player.update(1, this.game, isTargeting, worldMouse);
 
     if (this.isMouseDown || player.autoFire) {
       player.shoot(this.game);

@@ -56,7 +56,7 @@ export const TANK_CLASSES = {
     barrels: [
       { height: 56, width: 22, offsetY: 0, angleOffset: 0, recoil: 4.0, reloadMult: 0.50, damageMult: 1.4, speedMult: 1.5, sizeMult: 1.1 }
     ],
-    evolvesTo: ['assassin', 'hunter'],
+    evolvesTo: ['assassin', 'overseer'],
     abilityName: 'Eagle Vision',
     cooldown: 8.0
   },
@@ -168,6 +168,21 @@ export const TANK_CLASSES = {
     cooldown: 5.0
   },
 
+  overseer: {
+    id: 'overseer',
+    name: 'Overseer',
+    tier: 3,
+    requiredLevel: 30,
+    nextTierRequiredLevel: 45,
+    barrels: [
+      { height: 34, width: 28, offsetY: 0, angleOffset: 0.785, recoil: 0 },
+      { height: 34, width: 28, offsetY: 0, angleOffset: -0.785, recoil: 0 }
+    ],
+    evolvesTo: ['overlord', 'necromancer'],
+    abilityName: 'Drone Swarm',
+    cooldown: 6.0
+  },
+
   // Tier 4 (Level 45)
   penta_shot: {
     id: 'penta_shot',
@@ -247,5 +262,35 @@ export const TANK_CLASSES = {
     ],
     abilityName: 'Overdrive Dash',
     cooldown: 5.0
+  },
+
+  overlord: {
+    id: 'overlord',
+    name: 'Overlord',
+    tier: 4,
+    requiredLevel: 45,
+    nextTierRequiredLevel: 999,
+    barrels: [
+      { height: 36, width: 30, offsetY: 0, angleOffset: 0, recoil: 0 },
+      { height: 36, width: 30, offsetY: 0, angleOffset: Math.PI / 2, recoil: 0 },
+      { height: 36, width: 30, offsetY: 0, angleOffset: Math.PI, recoil: 0 },
+      { height: 36, width: 30, offsetY: 0, angleOffset: -Math.PI / 2, recoil: 0 }
+    ],
+    abilityName: 'Rapid Respawn Swarm',
+    cooldown: 4.0
+  },
+
+  necromancer: {
+    id: 'necromancer',
+    name: 'Necromancer',
+    tier: 4,
+    requiredLevel: 45,
+    nextTierRequiredLevel: 999,
+    barrels: [
+      { height: 36, width: 36, offsetY: 0, angleOffset: 0, recoil: 0 },
+      { height: 36, width: 36, offsetY: 0, angleOffset: Math.PI, recoil: 0 }
+    ],
+    abilityName: 'Square Conversion',
+    cooldown: 4.0
   }
 };
