@@ -4,6 +4,7 @@
   "description": "Multiplayer 2D Tank Battle Arena inspired by Diep.io",
   "main": "server.js",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node server.js",
     "dev": "node server.js"
   },

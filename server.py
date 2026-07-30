@@ -53,7 +53,7 @@ class GameHTTPRequestHandler(SimpleHTTPRequestHandler):
 def start_http_server():
     server_address = ('', HTTP_PORT)
     httpd = HTTPServer(server_address, GameHTTPRequestHandler)
-    print(f"🎮 HTTP Game Server running on http://localhost:{HTTP_PORT}")
+    print(f"[SERVER] HTTP Game Server running on http://localhost:{HTTP_PORT}")
     httpd.serve_forever()
 
 http_thread = threading.Thread(target=start_http_server, daemon=True)
